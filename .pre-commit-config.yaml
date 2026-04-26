@@ -1,3 +1,7 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
 repos:
   - repo: https://github.com/crate-ci/typos
     rev: v1.45.1
@@ -13,4 +17,13 @@ repos:
         args: [ --fix ]
       # Run the formatter.
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: commit-style-check
+        name: Custom commit message style check
+        entry: uvx --from git+https://github.com/ooooo-create/odev.git@fc9b176312086175763b5410b50c5f8c7167a2f3 odev-commit-msg
+        language: system
+        stages: [commit-msg]
+
   
