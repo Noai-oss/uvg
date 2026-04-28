@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
 
       - name: Check PR Title
         shell: bash -e -u -o pipefail {0}
