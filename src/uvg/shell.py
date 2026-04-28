@@ -79,7 +79,7 @@ function uvg {
             return
         }
 
-        $uvgExecutable = (Get-Command uvg -CommandType Application).Source
+        $uvgExecutable = (Get-Command uvg -CommandType Application -TotalCount 1).Source
         $activationCommand = & $uvgExecutable activate --shell ps1 $args[1]
         if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($activationCommand)) {
             $global:LASTEXITCODE = 1
@@ -90,7 +90,7 @@ function uvg {
         return
     }
 
-    $uvgExecutable = (Get-Command uvg -CommandType Application).Source
+    $uvgExecutable = (Get-Command uvg -CommandType Application -TotalCount 1).Source
     & $uvgExecutable @args
 }"""
 
