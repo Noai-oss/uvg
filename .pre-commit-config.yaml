@@ -29,5 +29,5 @@ repos:
         name: Custom commit message style check
         entry: odev-commit-msg
         language: python
-        additional_dependencies: ['git+https://github.com/ooooo-create/odev.git@fc9b176312086175763b5410b50c5f8c7167a2f3']
+        additional_dependencies: ['git+https://github.com/ooooo-create/odev.git@113d9ddb2876046719720abbbc7b2de8af08c150']
         stages: [commit-msg]
