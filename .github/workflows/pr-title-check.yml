@@ -12,7 +12,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Check PR Title
-        shell: bash -x -e -u -o pipefail {0}
+        shell: bash -e -u -o pipefail {0}
         env:
           GITHUB_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
         run: |
