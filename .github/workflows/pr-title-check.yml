@@ -1,0 +1,23 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+          ignore-empty-workdir: true
+
+      - name: Check PR Title
+        shell: bash -e -u -o pipefail {0}
+        env:
+          GITHUB_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s\n' "$GITHUB_PULL_REQUEST_TITLE" > pr_title.txt
+          uvx --from git+https://github.com/Noai-oss/odev.git@cd36de80bdbfc5e9b2c84f15210823562b87aa9d odev-commit-msg pr_title.txt

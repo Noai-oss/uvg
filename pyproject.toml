@@ -1,0 +1,27 @@
+[project]
+name = "uvg"
+version = "0.1.0"
+description = "A global virtual environment manager built on top of uv"
+readme = "README.md"
+authors = [
+    { name = "Noai-oss", email = "jiuwoxiao@outlook.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.24.1",
+]
+
+[project.scripts]
+uvg = "uvg.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.11",
+    "ty>=0.0.31",
+    "typos>=1.45.1",
+]
