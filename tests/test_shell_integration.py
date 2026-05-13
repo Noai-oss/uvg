@@ -50,7 +50,6 @@ class ShellIntegrationTests(unittest.TestCase):
             self.assertFalse(second_write_result)
 
     @unittest.skipUnless(sys.platform == "win32", "Windows-only path rendering")
-    @patch("uvg.utils.shell.IS_WINDOWS", True)
     def test_render_activation_command_returns_posix_source_command_for_bash_on_windows(
         self,
     ) -> None:
@@ -64,7 +63,6 @@ class ShellIntegrationTests(unittest.TestCase):
         )
 
     @unittest.skipUnless(sys.platform == "win32", "Windows-only path rendering")
-    @patch("uvg.utils.shell.IS_WINDOWS", True)
     def test_render_activation_command_returns_pwsh_dot_source_command(self) -> None:
         activation_command = render_activation_command(
             Path(r"C:\Users\me\.uvg\venvs\tools"), ShellName.pwsh
@@ -76,7 +74,6 @@ class ShellIntegrationTests(unittest.TestCase):
         )
 
     @unittest.skipUnless(sys.platform == "win32", "Windows-only path rendering")
-    @patch("uvg.utils.shell.IS_WINDOWS", True)
     def test_build_activation_script_path_uses_scripts_directory_for_bash_on_windows(
         self,
     ) -> None:
