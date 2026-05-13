@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import tempfile
 import unittest
 from io import BytesIO
@@ -48,6 +49,7 @@ class ShellIntegrationTests(unittest.TestCase):
             self.assertTrue(first_write_result)
             self.assertFalse(second_write_result)
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows-only path rendering")
     @patch("uvg.utils.shell.IS_WINDOWS", True)
     def test_render_activation_command_returns_posix_source_command_for_bash_on_windows(
         self,
@@ -61,6 +63,7 @@ class ShellIntegrationTests(unittest.TestCase):
             "source /c/Users/me/.uvg/venvs/tools/Scripts/activate",
         )
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows-only path rendering")
     @patch("uvg.utils.shell.IS_WINDOWS", True)
     def test_render_activation_command_returns_pwsh_dot_source_command(self) -> None:
         activation_command = render_activation_command(
@@ -72,6 +75,7 @@ class ShellIntegrationTests(unittest.TestCase):
             ". 'C:\\Users\\me\\.uvg\\venvs\\tools\\Scripts\\Activate.ps1'",
         )
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows-only path rendering")
     @patch("uvg.utils.shell.IS_WINDOWS", True)
     def test_build_activation_script_path_uses_scripts_directory_for_bash_on_windows(
         self,
