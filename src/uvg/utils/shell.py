@@ -1,12 +1,25 @@
 from __future__ import annotations
 
-import platform
 import shlex
-from pathlib import Path, PureWindowsPath
-from typing import Literal
+import sys
+from pathlib import Path
+from enum import Enum
+from typing import Literal, TypeAlias
 
 
-ShellType = Literal["bash", "zsh", "ps1", "pwsh"]
+class ShellName(str, Enum):
+    bash = "bash"
+    zsh = "zsh"
+    pwsh = "pwsh"
+
+    @property
+    def is_posix(self) -> bool:
+        return self in {ShellName.bash, ShellName.zsh}
+
+
+PosixShellName: TypeAlias = Literal[ShellName.bash, ShellName.zsh]
+
+IS_WINDOWS = sys.platform == "win32"
 
 
 # ============================================================================
@@ -22,11 +35,9 @@ PROFILE_SNIPPET_END_MARKER = "# <<< uvg initialize <<<"
 # ============================================================================
 
 
-def get_default_shell_type_for_current_platform() -> ShellType:
+def get_default_shell_type_for_current_platform() -> ShellName:
     """Get the default shell type for the current operating system."""
-    if platform.system() == "Windows":
-        return "ps1"
-    return "bash"
+    return ShellName.pwsh if IS_WINDOWS else ShellName.bash
 
 
 # ============================================================================
@@ -34,23 +45,22 @@ def get_default_shell_type_for_current_platform() -> ShellType:
 # ============================================================================
 
 
-def render_shell_integration_script(shell_name: ShellType) -> str:
+def render_shell_integration_script(shell_name: ShellName) -> str:
     """Render the shell integration script for a specific shell."""
-    if shell_name == "bash" or shell_name == "zsh":
-        # TODO(ty): 使用 list 没有达到 Type Narrowing 的效果，暂时先用 == 了
-        return _render_posix_shell_integration_script(shell_name)
-
-    if shell_name == "ps1" or shell_name == "pwsh":
-        # TODO(ty): 使用 list 没有达到 Type Narrowing 的效果，暂时先用 == 了
-        return _render_pwsh_integration_script()
-
-    raise ValueError(f"Unsupported shell: {shell_name}")
+    match shell_name:
+        case ShellName.pwsh:
+            return _render_pwsh_integration_script()
+        case ShellName.bash | ShellName.zsh:
+            return _render_posix_shell_integration_script(shell_name)
+        case _:
+            raise ValueError(f"Unsupported shell: {shell_name}")
 
 
-def _render_posix_shell_integration_script(shell_name: Literal["bash", "zsh"]) -> str:
-    """Render shell integration script for bash/zsh."""
-    # TODO: 目前没有实际测试过这些能否生效
-    return f"""# uvg shell integration for bash/zsh
+def _render_posix_shell_integration_script(
+    shell_name: PosixShellName,
+) -> str:
+    """Render shell integration script for POSIX-style shells."""
+    return f"""# uvg shell integration for {shell_name.value}
 uvg() {{
     if [ "$1" = "activate" ]; then
         if [ -z "$2" ]; then
@@ -59,7 +69,7 @@ uvg() {{
         fi
 
         local activation_command
-        activation_command="$(command uvg activate --shell {shell_name} "$2")" || return 1
+        activation_command="$(command uvg activate --shell {shell_name.value} "$2")" || return 1
         eval "$activation_command"
         return $?
     fi
@@ -80,7 +90,7 @@ function uvg {
         }
 
         $uvgExecutable = (Get-Command uvg -CommandType Application -TotalCount 1).Source
-        $activationCommand = & $uvgExecutable activate --shell ps1 $args[1]
+        $activationCommand = & $uvgExecutable activate --shell pwsh $args[1]
         if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($activationCommand)) {
             $global:LASTEXITCODE = 1
             return
@@ -101,7 +111,7 @@ function uvg {
 
 
 def append_shell_integration_to_profile(
-    shell_name: ShellType, profile_path: Path
+    shell_name: ShellName, profile_path: Path
 ) -> bool:
     """Append shell integration snippet to a shell profile file."""
     initialization_command = build_profile_initialization_command(shell_name)
@@ -116,19 +126,23 @@ def append_shell_integration_to_profile(
             return False
 
     profile_path.parent.mkdir(parents=True, exist_ok=True)
-    with profile_path.open("a", encoding="utf-8") as profile_file:
+    with profile_path.open("a", encoding="utf-8", newline="\n") as profile_file:
         profile_file.write(profile_snippet)
 
     return True
 
 
-def build_profile_initialization_command(shell_name: ShellType) -> str:
+def build_profile_initialization_command(shell_name: ShellName) -> str:
     """Build the initialization command for a shell profile."""
-    if shell_name in {"ps1", "pwsh"}:
-        return "Invoke-Expression (uvg init ps1 | Out-String)"
-    if shell_name == "bash":
-        return 'eval "$(uvg init bash)"'
-    return 'eval "$(uvg init zsh)"'
+    match shell_name:
+        case ShellName.pwsh:
+            return "Invoke-Expression (uvg init pwsh | Out-String)"
+        case ShellName.bash:
+            return 'eval "$(uvg init bash)"'
+        case ShellName.zsh:
+            return 'eval "$(uvg init zsh)"'
+        case _:
+            raise ValueError(f"Unsupported shell: {shell_name}")
 
 
 def render_profile_initialization_snippet(initialization_command: str) -> str:
@@ -146,29 +160,39 @@ def render_profile_initialization_snippet(initialization_command: str) -> str:
 # ============================================================================
 
 
-def render_activation_command(environment_path: Path, shell_name: ShellType) -> str:
+def render_activation_command(environment_path: Path, shell_name: ShellName) -> str:
     """Render the command to activate an environment for a specific shell."""
     activation_script_path = build_activation_script_path(environment_path, shell_name)
 
-    if shell_name in {"bash", "zsh"}:
+    if shell_name in {ShellName.bash, ShellName.zsh}:
         return f"source {shlex.quote(activation_script_path)}"
 
     return f". {_quote_pwsh_string_literal(activation_script_path)}"
 
 
-def build_activation_script_path(environment_path: Path, shell_name: ShellType) -> str:
+def build_activation_script_path(environment_path: Path, shell_name: ShellName) -> str:
     """Build the path to the activation script for a shell."""
-    if platform.system() == "Windows":
-        if shell_name in {"bash", "zsh"}:
-            return PureWindowsPath(environment_path, "Scripts", "activate").as_posix()
-        return str(PureWindowsPath(environment_path, "Scripts", "Activate.ps1"))
+    scripts_dir = environment_path / ("Scripts" if IS_WINDOWS else "bin")
 
-    if shell_name in {"bash", "zsh"}:
-        return str(environment_path / "bin" / "activate")
+    if shell_name in {ShellName.bash, ShellName.zsh}:
+        script_path = scripts_dir / "activate"
+        return (
+            convert_windows_path_to_msys_path(script_path)
+            if IS_WINDOWS
+            else str(script_path)
+        )
 
-    return str(environment_path / "bin" / "Activate.ps1")
+    return str(scripts_dir / "Activate.ps1")
 
 
 def _quote_pwsh_string_literal(value: str) -> str:
     """Quote a string for Pwsh."""
     return "'" + value.replace("'", "''") + "'"
+
+
+def convert_windows_path_to_msys_path(path: Path) -> str:
+    """Convert C:/style paths to /c/style paths for MSYS-like shells."""
+    posix_path = path.as_posix()
+    if len(posix_path) >= 3 and posix_path[1:3] == ":/":
+        return f"/{posix_path[0].lower()}{posix_path[2:]}"
+    return posix_path

@@ -6,14 +6,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import uvg.environment as environment_module
-from uvg.errors import UvgError
-from uvg.environment import (
-    validate_managed_environment_name,
-    list_managed_environment_names,
-    remove_managed_environment,
-    current_environment_name,
-    create_managed_environment,
+import uvg.core.environment as environment_module
+from uvg.cli.env import list_environments_command
+from uvg.core.errors import UvgError
+from uvg.core.environment import (
+    create,
+    get_current_name,
+    list_names,
+    read_python_version,
+    remove,
+    validate_name,
 )
 
 
@@ -27,12 +29,12 @@ class ManagedEnvironmentTests(unittest.TestCase):
 
         self.uvg_home_patcher = patch.object(
             environment_module,
-            "UVG_HOME_DIRECTORY",
+            "UVG_HOME_DIR",
             self.uvg_home_directory,
         )
         self.environment_directory_patcher = patch.object(
             environment_module,
-            "MANAGED_ENVIRONMENTS_DIRECTORY",
+            "VENVS_DIR",
             self.managed_environments_directory,
         )
         self.uvg_home_patcher.start()
@@ -42,15 +44,43 @@ class ManagedEnvironmentTests(unittest.TestCase):
 
     def test_validate_managed_environment_name_rejects_path_traversal(self) -> None:
         with self.assertRaises(UvgError):
-            validate_managed_environment_name("../tools")
+            validate_name("../tools")
 
     def test_list_managed_environment_names_returns_sorted_names(self) -> None:
         (self.managed_environments_directory / "zeta").mkdir(parents=True)
         (self.managed_environments_directory / "alpha").mkdir()
 
-        self.assertEqual(list_managed_environment_names(), ["alpha", "zeta"])
+        self.assertEqual(list_names(), ["alpha", "zeta"])
 
-    @patch("uvg.environment.subprocess.run")
+    def test_read_python_version_reads_pyvenv_cfg_version_info(self) -> None:
+        environment_path = self.managed_environments_directory / "tools"
+        environment_path.mkdir(parents=True)
+        (environment_path / "pyvenv.cfg").write_text(
+            "version_info = 3.14.0rc3\n",
+            encoding="utf-8",
+        )
+
+        self.assertEqual(read_python_version(environment_path), "3.14.0rc3")
+
+    def test_list_managed_environments_prints_name_and_version_without_header(
+        self,
+    ) -> None:
+        alpha_environment_path = self.managed_environments_directory / "alpha"
+        zeta_environment_path = self.managed_environments_directory / "zeta"
+        alpha_environment_path.mkdir(parents=True)
+        zeta_environment_path.mkdir()
+        (alpha_environment_path / "pyvenv.cfg").write_text(
+            "version_info = 3.12.11\n",
+            encoding="utf-8",
+        )
+
+        printed_lines: list[str] = []
+        with patch("uvg.cli.env.typer.echo", side_effect=printed_lines.append):
+            list_environments_command()
+
+        self.assertEqual(printed_lines, ["alpha  3.12.11", "zeta   unknown"])
+
+    @patch("uvg.core.environment.subprocess.run")
     def test_create_managed_environment_invokes_uv_with_expected_arguments(
         self,
         subprocess_run_mock,
@@ -62,7 +92,7 @@ class ManagedEnvironmentTests(unittest.TestCase):
             stderr="",
         )
 
-        environment_path = create_managed_environment("tools", "3.12")
+        environment_path = create("tools", "3.12")
 
         self.assertEqual(
             environment_path, self.managed_environments_directory / "tools"
@@ -81,21 +111,21 @@ class ManagedEnvironmentTests(unittest.TestCase):
             text=True,
         )
 
-    @patch("uvg.environment.subprocess.run", side_effect=FileNotFoundError)
+    @patch("uvg.core.environment.subprocess.run", side_effect=FileNotFoundError)
     def test_create_managed_environment_reports_missing_uv_executable(
         self,
         subprocess_run_mock,
     ) -> None:
         with self.assertRaisesRegex(UvgError, "The `uv` executable was not found"):
-            create_managed_environment("tools")
+            create("tools")
 
     @patch.dict("os.environ", {}, clear=True)
     def test_current_environment_name_returns_none_when_silent_without_active_environment(
         self,
     ) -> None:
-        self.assertIsNone(current_environment_name(silent=True))
+        self.assertIsNone(get_current_name(silent=True))
 
-    @patch("uvg.environment.current_environment_name", return_value="tools")
+    @patch("uvg.core.environment.get_current_name", return_value="tools")
     def test_remove_managed_environment_refuses_active_environment(
         self,
         current_environment_name_mock,
@@ -103,6 +133,6 @@ class ManagedEnvironmentTests(unittest.TestCase):
         (self.managed_environments_directory / "tools").mkdir(parents=True)
 
         with self.assertRaisesRegex(UvgError, "currently active"):
-            remove_managed_environment("tools")
+            remove("tools")
 
         current_environment_name_mock.assert_called_once_with(silent=True)

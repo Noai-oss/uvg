@@ -4,7 +4,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,10 +14,10 @@ from .errors import UvgError
 # Layout & Constants
 # ============================================================================
 
-UVG_HOME_DIRECTORY = Path.home() / ".uvg"
-MANAGED_ENVIRONMENTS_DIRECTORY = UVG_HOME_DIRECTORY / "venvs"
+UVG_HOME_DIR = Path.home() / ".uvg"
+VENVS_DIR = UVG_HOME_DIR / "venvs"
 
-MANAGED_ENVIRONMENT_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 # ============================================================================
@@ -27,7 +26,7 @@ MANAGED_ENVIRONMENT_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 @dataclass(frozen=True, slots=True)
-class ManagedEnvironmentInfo:
+class EnvironmentInfo:
     name: str
     path: Path
     python_executable: Path
@@ -39,32 +38,32 @@ class ManagedEnvironmentInfo:
 # ============================================================================
 
 
-def ensure_managed_environment_layout_exists() -> None:
+def ensure_layout() -> None:
     """Create the managed environments directory structure."""
-    MANAGED_ENVIRONMENTS_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    VENVS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def build_managed_environment_path(environment_name: str) -> Path:
+def build_path(environment_name: str) -> Path:
     """Build the path for a managed environment."""
-    return MANAGED_ENVIRONMENTS_DIRECTORY / environment_name
+    return VENVS_DIR / environment_name
 
 
-def is_managed_environment_path(path: str | Path) -> bool:
+def is_valid_path(path: str | Path) -> bool:
     """Check if a path is within the managed environments directory."""
     try:
         resolved_path = Path(path).resolve()
-        managed_root_directory = MANAGED_ENVIRONMENTS_DIRECTORY.resolve()
+        managed_root_directory = VENVS_DIR.resolve()
         resolved_path.relative_to(managed_root_directory)
     except (OSError, ValueError):
         return False
     return True
 
 
-def get_managed_environment_name_from_path(path: str | Path) -> str | None:
+def extract_name_from_path(path: str | Path) -> str | None:
     """Extract the environment name from a managed environment path."""
     try:
         resolved_path = Path(path).resolve()
-        managed_root_directory = MANAGED_ENVIRONMENTS_DIRECTORY.resolve()
+        managed_root_directory = VENVS_DIR.resolve()
         relative_path = resolved_path.relative_to(managed_root_directory)
     except (OSError, ValueError):
         return None
@@ -77,14 +76,14 @@ def get_managed_environment_name_from_path(path: str | Path) -> str | None:
 # ============================================================================
 
 
-def validate_managed_environment_name(environment_name: str) -> str:
+def validate_name(environment_name: str) -> str:
     """Validate and normalize an environment name."""
     normalized_environment_name = environment_name.strip()
 
     if not normalized_environment_name:
         raise UvgError("Environment name cannot be empty.")
 
-    if not MANAGED_ENVIRONMENT_NAME_PATTERN.fullmatch(normalized_environment_name):
+    if not NAME_PATTERN.fullmatch(normalized_environment_name):
         raise UvgError(
             "Environment name may only contain letters, numbers, dots, underscores, and hyphens."
         )
@@ -97,7 +96,7 @@ def validate_managed_environment_name(environment_name: str) -> str:
 # ============================================================================
 
 
-def current_environment_name(*, silent: bool = False) -> str | None:
+def get_current_name(*, silent: bool = False) -> str | None:
     """Get the name of the currently active managed environment."""
     active_virtual_environment_path = os.environ.get("VIRTUAL_ENV")
 
@@ -106,7 +105,7 @@ def current_environment_name(*, silent: bool = False) -> str | None:
             return None
         raise UvgError("No active virtual environment.")
 
-    if not is_managed_environment_path(active_virtual_environment_path):
+    if not is_valid_path(active_virtual_environment_path):
         if silent:
             return None
         raise UvgError(
@@ -114,9 +113,7 @@ def current_environment_name(*, silent: bool = False) -> str | None:
             f"Path: {active_virtual_environment_path}"
         )
 
-    environment_name = get_managed_environment_name_from_path(
-        active_virtual_environment_path
-    )
+    environment_name = extract_name_from_path(active_virtual_environment_path)
     if not environment_name:
         if silent:
             return None
@@ -130,25 +127,23 @@ def current_environment_name(*, silent: bool = False) -> str | None:
 # ============================================================================
 
 
-def list_managed_environment_names() -> list[str]:
+def list_names() -> list[str]:
     """List all managed environment names."""
-    if not MANAGED_ENVIRONMENTS_DIRECTORY.exists():
+    if not VENVS_DIR.exists():
         return []
 
     environment_names = [
         candidate_path.name
-        for candidate_path in MANAGED_ENVIRONMENTS_DIRECTORY.iterdir()
+        for candidate_path in VENVS_DIR.iterdir()
         if candidate_path.is_dir()
     ]
     return sorted(environment_names)
 
 
-def resolve_managed_environment_path(environment_name: str) -> Path:
+def resolve_path(environment_name: str) -> Path:
     """Resolve and validate an environment path."""
-    normalized_environment_name = validate_managed_environment_name(environment_name)
-    managed_environment_path = build_managed_environment_path(
-        normalized_environment_name
-    )
+    normalized_environment_name = validate_name(environment_name)
+    managed_environment_path = build_path(normalized_environment_name)
 
     if not managed_environment_path.exists():
         raise UvgError(f"Environment '{normalized_environment_name}' does not exist.")
@@ -160,14 +155,12 @@ def resolve_managed_environment_path(environment_name: str) -> Path:
     return managed_environment_path
 
 
-def remove_managed_environment(environment_name: str) -> None:
+def remove(environment_name: str) -> None:
     """Remove a managed environment."""
-    normalized_environment_name = validate_managed_environment_name(environment_name)
-    managed_environment_path = resolve_managed_environment_path(
-        normalized_environment_name
-    )
+    normalized_environment_name = validate_name(environment_name)
+    managed_environment_path = resolve_path(normalized_environment_name)
 
-    if current_environment_name(silent=True) == normalized_environment_name:
+    if get_current_name(silent=True) == normalized_environment_name:
         raise UvgError(
             f"Environment '{normalized_environment_name}' is currently active. "
             "Deactivate it before removing."
@@ -176,56 +169,20 @@ def remove_managed_environment(environment_name: str) -> None:
     shutil.rmtree(managed_environment_path)
 
 
-def get_managed_environment_info(
-    environment_name: str,
-    *,
-    raise_if_missing: bool = True,  # [TODO] 这个参数是有待确认
-) -> ManagedEnvironmentInfo:
-    """Get information about a managed environment."""
-    normalized_environment_name = validate_managed_environment_name(environment_name)
-    managed_environment_path = build_managed_environment_path(
-        normalized_environment_name
-    )
-    environment_exists = managed_environment_path.exists()
-
-    if raise_if_missing and not environment_exists:
-        raise UvgError(f"Environment '{normalized_environment_name}' does not exist.")
-
-    python_executable_path = build_python_executable_path_for_environment(
-        managed_environment_path
-    )
-
-    return ManagedEnvironmentInfo(
-        name=managed_environment_path.name,
-        path=managed_environment_path,
-        python_executable=python_executable_path,
-        exists=environment_exists,
-    )
-
-
-def build_python_executable_path_for_environment(environment_path: Path) -> Path:
-    """Build the path to the Python executable in an environment."""
-    if sys.platform.startswith("win"):
-        return environment_path / "Scripts" / "python.exe"
-    return environment_path / "bin" / "python"
-
-
 # ============================================================================
 # UV Integration - Creation
 # ============================================================================
 
 
-def create_managed_environment(
+def create(
     environment_name: str,
     python_version: str | None = None,
 ) -> Path:
     """Create a new managed environment using uv venv."""
-    ensure_managed_environment_layout_exists()
+    ensure_layout()
 
-    normalized_environment_name = validate_managed_environment_name(environment_name)
-    managed_environment_path = build_managed_environment_path(
-        normalized_environment_name
-    )
+    normalized_environment_name = validate_name(environment_name)
+    managed_environment_path = build_path(normalized_environment_name)
 
     if managed_environment_path.exists():
         raise UvgError(f"Environment '{normalized_environment_name}' already exists.")
@@ -254,3 +211,18 @@ def create_managed_environment(
         )
 
     return managed_environment_path
+
+
+def read_python_version(environment_path: Path) -> str | None:
+    """Read the Python version used by a managed environment."""
+    pyvenv_cfg_path = environment_path / "pyvenv.cfg"
+    if not pyvenv_cfg_path.exists():
+        return None
+
+    for line in pyvenv_cfg_path.read_text(encoding="utf-8").splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == "version_info":
+            return value.strip()
+    return None
