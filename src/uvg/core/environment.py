@@ -11,12 +11,12 @@ from .errors import UvgError
 
 
 # ============================================================================
-# Layout & Constants
+# Layout
 # ============================================================================
 
-UVG_HOME_DIR = Path.home() / ".uvg"
-VENVS_DIR = UVG_HOME_DIR / "venvs"
-
+UVG_HOME_ENV_VAR = "UVG_HOME"
+DEFAULT_UVG_HOME_DIR = Path.home() / ".uvg"
+VENVS_DIR_NAME = "venvs"
 NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
@@ -40,19 +40,32 @@ class EnvironmentInfo:
 
 def ensure_layout() -> None:
     """Create the managed environments directory structure."""
-    VENVS_DIR.mkdir(parents=True, exist_ok=True)
+    get_venvs_dir().mkdir(parents=True, exist_ok=True)
 
 
 def build_path(environment_name: str) -> Path:
     """Build the path for a managed environment."""
-    return VENVS_DIR / environment_name
+    return get_venvs_dir() / environment_name
+
+
+def get_uvg_home_dir() -> Path:
+    """Return the uvg home directory."""
+    configured_home_directory = os.environ.get(UVG_HOME_ENV_VAR)
+    if configured_home_directory:
+        return Path(configured_home_directory).expanduser()
+    return DEFAULT_UVG_HOME_DIR
+
+
+def get_venvs_dir() -> Path:
+    """Return the managed environments directory."""
+    return get_uvg_home_dir() / VENVS_DIR_NAME
 
 
 def is_valid_path(path: str | Path) -> bool:
     """Check if a path is within the managed environments directory."""
     try:
         resolved_path = Path(path).resolve()
-        managed_root_directory = VENVS_DIR.resolve()
+        managed_root_directory = get_venvs_dir().resolve()
         resolved_path.relative_to(managed_root_directory)
     except (OSError, ValueError):
         return False
@@ -63,7 +76,7 @@ def extract_name_from_path(path: str | Path) -> str | None:
     """Extract the environment name from a managed environment path."""
     try:
         resolved_path = Path(path).resolve()
-        managed_root_directory = VENVS_DIR.resolve()
+        managed_root_directory = get_venvs_dir().resolve()
         relative_path = resolved_path.relative_to(managed_root_directory)
     except (OSError, ValueError):
         return None
@@ -129,12 +142,13 @@ def get_current_name(*, silent: bool = False) -> str | None:
 
 def list_names() -> list[str]:
     """List all managed environment names."""
-    if not VENVS_DIR.exists():
+    managed_environments_directory = get_venvs_dir()
+    if not managed_environments_directory.exists():
         return []
 
     environment_names = [
         candidate_path.name
-        for candidate_path in VENVS_DIR.iterdir()
+        for candidate_path in managed_environments_directory.iterdir()
         if candidate_path.is_dir()
     ]
     return sorted(environment_names)
