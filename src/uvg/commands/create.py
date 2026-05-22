@@ -7,6 +7,10 @@ import typer
 from uvg.core.environment import create
 
 
+app = typer.Typer()
+
+
+@app.command("create")
 def create_environment_command(
     environment_name: Annotated[str, typer.Argument(help="Environment name")],
     python_version: Annotated[

@@ -6,15 +6,19 @@ from typing import Annotated
 
 import typer
 
-from uvg.utils.shell import (
+from uvg.core.shell import (
+    IS_WINDOWS,
     ShellName,
     append_shell_integration_to_profile,
-    render_shell_integration_script,
     convert_windows_path_to_msys_path,
-    IS_WINDOWS,
+    render_shell_integration_script,
 )
 
 
+app = typer.Typer()
+
+
+@app.command("init")
 def initialize_shell_integration_command(
     shell_name: Annotated[ShellName, typer.Argument(help="Shell type")],
     profile_path: Annotated[

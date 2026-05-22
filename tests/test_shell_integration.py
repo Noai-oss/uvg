@@ -7,9 +7,9 @@ from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
-from uvg.cli.activate import activate_environment_command
-from uvg.cli.init import initialize_shell_integration_command
-from uvg.utils.shell import (
+from uvg.commands.activate import activate_environment_command
+from uvg.commands.init import initialize_shell_integration_command
+from uvg.core.shell import (
     ShellName,
     append_shell_integration_to_profile,
     build_activation_script_path,
@@ -87,7 +87,7 @@ class ShellIntegrationTests(unittest.TestCase):
             "/c/Users/me/.uvg/venvs/tools/Scripts/activate",
         )
 
-    @patch("uvg.cli.activate.resolve_path")
+    @patch("uvg.commands.activate.resolve_path")
     def test_activate_command_writes_shell_code_with_binary_stdout(
         self,
         resolve_path_mock,
@@ -97,7 +97,7 @@ class ShellIntegrationTests(unittest.TestCase):
         for shell_name in (ShellName.bash, ShellName.pwsh):
             with self.subTest(shell_name=shell_name):
                 stdout = BinaryStdout()
-                with patch("uvg.cli.activate.sys.stdout", stdout):
+                with patch("uvg.commands.activate.sys.stdout", stdout):
                     activate_environment_command("tools", shell_name)
 
                 output = stdout.buffer.getvalue()
@@ -108,7 +108,7 @@ class ShellIntegrationTests(unittest.TestCase):
         for shell_name in (ShellName.bash, ShellName.pwsh):
             with self.subTest(shell_name=shell_name):
                 stdout = BinaryStdout()
-                with patch("uvg.cli.init.sys.stdout", stdout):
+                with patch("uvg.commands.init.sys.stdout", stdout):
                     initialize_shell_integration_command(shell_name)
 
                 output = stdout.buffer.getvalue()

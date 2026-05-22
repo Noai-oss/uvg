@@ -1,8 +1,10 @@
 # uvg
 
-A global Python virtual environment manager built on `uv`. Environments are stored in `~/.uvg/venvs`.
+A global Python virtual environment manager built on `uv`. Environments default to `~/.uvg/venvs`.
 
 **`uv` for projects, `uvg` for environments.**
+
+Set `UVG_HOME` to move the uvg home directory.
 
 ## Installation
 

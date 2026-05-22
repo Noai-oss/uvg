@@ -6,13 +6,17 @@ from typing import Annotated
 import typer
 
 from uvg.core.environment import resolve_path
-from uvg.utils.shell import (
+from uvg.core.shell import (
     ShellName,
     get_default_shell_type_for_current_platform,
     render_activation_command,
 )
 
 
+app = typer.Typer()
+
+
+@app.command("activate")
 def activate_environment_command(
     environment_name: Annotated[str, typer.Argument(help="Environment name")],
     shell_name: Annotated[

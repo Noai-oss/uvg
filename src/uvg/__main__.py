@@ -6,7 +6,7 @@ from collections.abc import Sequence
 import click
 import typer
 
-from uvg.cli.main import app
+from uvg.cli import app
 from uvg.core.errors import UvgError
 
 

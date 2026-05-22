@@ -6,11 +6,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import uvg.core.environment as environment_module
-from uvg.cli.env import list_environments_command
+import typer
+from uvg.commands.remove import remove_environment_command
+from uvg.commands.env.list import list_environments_command
 from uvg.core.errors import UvgError
 from uvg.core.environment import (
     create,
+    get_venvs_dir,
     get_current_name,
     list_names,
     read_python_version,
@@ -27,24 +29,28 @@ class ManagedEnvironmentTests(unittest.TestCase):
         self.uvg_home_directory = Path(self.temporary_directory.name) / ".uvg"
         self.managed_environments_directory = self.uvg_home_directory / "venvs"
 
-        self.uvg_home_patcher = patch.object(
-            environment_module,
-            "UVG_HOME_DIR",
-            self.uvg_home_directory,
+        self.environment_patcher = patch.dict(
+            "os.environ",
+            {"UVG_HOME": str(self.uvg_home_directory)},
         )
-        self.environment_directory_patcher = patch.object(
-            environment_module,
-            "VENVS_DIR",
-            self.managed_environments_directory,
-        )
-        self.uvg_home_patcher.start()
-        self.environment_directory_patcher.start()
-        self.addCleanup(self.uvg_home_patcher.stop)
-        self.addCleanup(self.environment_directory_patcher.stop)
+        self.environment_patcher.start()
+        self.addCleanup(self.environment_patcher.stop)
 
     def test_validate_managed_environment_name_rejects_path_traversal(self) -> None:
         with self.assertRaises(UvgError):
             validate_name("../tools")
+
+    def test_managed_environment_directory_uses_environment_override(self) -> None:
+        self.assertEqual(get_venvs_dir(), self.managed_environments_directory)
+
+    def test_managed_environment_directory_uses_configured_home(self) -> None:
+        configured_home_directory = Path(self.temporary_directory.name) / "custom-home"
+        with patch.dict(
+            "os.environ",
+            {"UVG_HOME": str(configured_home_directory)},
+            clear=True,
+        ):
+            self.assertEqual(get_venvs_dir(), configured_home_directory / "venvs")
 
     def test_list_managed_environment_names_returns_sorted_names(self) -> None:
         (self.managed_environments_directory / "zeta").mkdir(parents=True)
@@ -75,7 +81,10 @@ class ManagedEnvironmentTests(unittest.TestCase):
         )
 
         printed_lines: list[str] = []
-        with patch("uvg.cli.env.typer.echo", side_effect=printed_lines.append):
+        with patch(
+            "uvg.commands.env.list.typer.echo",
+            side_effect=printed_lines.append,
+        ):
             list_environments_command()
 
         self.assertEqual(printed_lines, ["alpha  3.12.11", "zeta   unknown"])
@@ -136,3 +145,17 @@ class ManagedEnvironmentTests(unittest.TestCase):
             remove("tools")
 
         current_environment_name_mock.assert_called_once_with(silent=True)
+
+    def test_remove_command_cancel_exits_successfully_without_removing(self) -> None:
+        printed_lines: list[str] = []
+        with (
+            patch("uvg.commands.remove.typer.confirm", return_value=False),
+            patch("uvg.commands.remove.typer.echo", side_effect=printed_lines.append),
+            patch("uvg.commands.remove.remove") as remove_mock,
+        ):
+            with self.assertRaises(typer.Exit) as exit_context:
+                remove_environment_command("tools")
+
+        self.assertEqual(exit_context.exception.exit_code, 0)
+        self.assertEqual(printed_lines, ["Aborted."])
+        remove_mock.assert_not_called()
