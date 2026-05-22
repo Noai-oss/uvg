@@ -6,8 +6,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import typer
 import uvg.core.environment as environment_module
-from uvg.cli.env import list_environments_command
+from uvg.commands.remove import remove_environment_command
+from uvg.commands.env.list import list_environments_command
 from uvg.core.errors import UvgError
 from uvg.core.environment import (
     create,
@@ -75,7 +77,10 @@ class ManagedEnvironmentTests(unittest.TestCase):
         )
 
         printed_lines: list[str] = []
-        with patch("uvg.cli.env.typer.echo", side_effect=printed_lines.append):
+        with patch(
+            "uvg.commands.env.list.typer.echo",
+            side_effect=printed_lines.append,
+        ):
             list_environments_command()
 
         self.assertEqual(printed_lines, ["alpha  3.12.11", "zeta   unknown"])
@@ -136,3 +141,17 @@ class ManagedEnvironmentTests(unittest.TestCase):
             remove("tools")
 
         current_environment_name_mock.assert_called_once_with(silent=True)
+
+    def test_remove_command_cancel_exits_successfully_without_removing(self) -> None:
+        printed_lines: list[str] = []
+        with (
+            patch("uvg.commands.remove.typer.confirm", return_value=False),
+            patch("uvg.commands.remove.typer.echo", side_effect=printed_lines.append),
+            patch("uvg.commands.remove.remove") as remove_mock,
+        ):
+            with self.assertRaises(typer.Exit) as exit_context:
+                remove_environment_command("tools")
+
+        self.assertEqual(exit_context.exception.exit_code, 0)
+        self.assertEqual(printed_lines, ["Aborted."])
+        remove_mock.assert_not_called()

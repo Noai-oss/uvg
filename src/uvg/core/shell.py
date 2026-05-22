@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import shlex
 import sys
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 from typing import Literal, TypeAlias
 
 
