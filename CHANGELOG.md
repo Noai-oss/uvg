@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.2](https://github.com/Noai-oss/uvg/compare/v0.1.1..v0.1.2) - 2026-05-23
+
+### 🎉 Features
+
+- Add `--version` option and pre-check for `uv` ([#17](https://github.com/Noai-oss/uvg/issues/17)) - ([c68f8fb](https://github.com/Noai-oss/uvg/commit/c68f8fb30ba8da6e203f20a036de766d624c11fd))
+
+### 👷 CI
+
+- Auto-tag merged release PRs ([#18](https://github.com/Noai-oss/uvg/issues/18)) - ([b234a1b](https://github.com/Noai-oss/uvg/commit/b234a1b4e9fecd67ed6e007c91b76a5f731cbdd2))
+
+
 ## [0.1.1](https://github.com/Noai-oss/uvg/compare/v0.1.0..v0.1.1) - 2026-05-23
 
 ### 👷 CI
