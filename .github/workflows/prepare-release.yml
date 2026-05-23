@@ -40,7 +40,7 @@ jobs:
             version="${input_version#v}"
             tag="v${version}"
           else
-            tag="$(uvx --from git-cliff git-cliff --config pyproject.toml --bumped-version)"
+            tag="$(uvx --with typos --from git-cliff git-cliff --config pyproject.toml --bumped-version)"
             version="${tag#v}"
             tag="v${version}"
           fi
