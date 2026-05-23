@@ -64,6 +64,9 @@ jobs:
         run: uv version "${{ steps.release-version.outputs.version }}" --no-sync
 
       - name: Update changelog
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
         shell: bash -e -u -o pipefail {0}
         run: |
           tag="${{ steps.release-version.outputs.tag }}"
