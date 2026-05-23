@@ -125,6 +125,26 @@ jobs:
             exit 1
           fi
 
+          checked_out_sha="$(git rev-parse HEAD)"
+          if [[ "$checked_out_sha" != "$MERGE_SHA" ]]; then
+            echo "Checked out ${checked_out_sha}, expected ${MERGE_SHA}" >&2
+            exit 1
+          fi
+
+          project_version="$(python3 - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          print(pyproject["project"]["version"])
+          PY
+          )"
+
+          if [[ "$tag" != "v${project_version}" ]]; then
+            echo "Tag ${tag} does not match project version ${project_version}" >&2
+            exit 1
+          fi
+
           if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
             echo "Tag already exists: ${tag}" >&2
             exit 1
