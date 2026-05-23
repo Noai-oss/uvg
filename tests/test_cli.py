@@ -19,7 +19,7 @@ def test_version_option():
 @patch("uvg.cli.shutil.which")
 def test_command_should_fail_when_uv_missing(mock_which):
     mock_which.side_effect = lambda executable: (
-        None if executable == "uv" else "unexpected"
+        None if executable == "uv" else executable
     )
 
     with pytest.raises(UvgError) as exc_info:
