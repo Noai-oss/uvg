@@ -17,9 +17,13 @@ def test_version_option():
 
 
 @patch("uvg.cli.shutil.which")
-def test_command_should_fail_with_value_error(mock_which):
-    mock_which.return_value = None
+def test_command_should_fail_when_uv_missing(mock_which):
+    mock_which.side_effect = lambda executable: (
+        None if executable == "uv" else "unexpected"
+    )
+
     with pytest.raises(UvgError) as exc_info:
         runner.invoke(app, ["env", "list"], catch_exceptions=False)
 
     assert "Error: Not found 'uv', please install it first." in str(exc_info.value)
+    mock_which.assert_called_once_with("uv")

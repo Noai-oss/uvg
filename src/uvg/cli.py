@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import typer
-
-from uvg.commands import activate, create, init, remove
-from uvg.commands.env import app as env_app
-from uvg import __version__
 import shutil
 
+import typer
+
+from uvg import __version__
+from uvg.commands import activate, create, init, remove
+from uvg.commands.env import app as env_app
 from uvg.core.errors import UvgError
 
 app = typer.Typer(
@@ -34,7 +34,7 @@ def callback_func(
         is_eager=True,
     ),
 ):
-    if shutil.which("uvg") is None:
+    if shutil.which("uv") is None:
         raise UvgError("Error: Not found 'uv', please install it first.")
 
 
