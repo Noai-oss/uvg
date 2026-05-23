@@ -69,21 +69,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash -e -u -o pipefail {0}
         run: |
-          tag="${{ steps.release-version.outputs.tag }}"
-
-          if git describe --tags --match "v[0-9]*" --abbrev=0 >/dev/null 2>&1; then
-            uvx --from git-cliff git-cliff \
-              --config pyproject.toml \
-              --unreleased \
-              --tag "$tag" \
-              --prepend CHANGELOG.md
-          else
-            uvx --from git-cliff git-cliff \
-              --config pyproject.toml \
-              --unreleased \
-              --tag "$tag" \
-              -o CHANGELOG.md
-          fi
+          uvx --with typos --from git-cliff git-cliff \
+            --config pyproject.toml \
+            --tag "${{ steps.release-version.outputs.tag }}" \
+            -o CHANGELOG.md
 
       - name: Create release pull request
         uses: peter-evans/create-pull-request@v8
