@@ -112,6 +112,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Create and push release tag
         shell: bash -e -u -o pipefail {0}
         env:
@@ -131,15 +134,7 @@ jobs:
             exit 1
           fi
 
-          project_version="$(python3 - <<'PY'
-          import tomllib
-          from pathlib import Path
-
-          pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-          print(pyproject["project"]["version"])
-          PY
-          )"
-
+          project_version="$(uv version --short)"
           if [[ "$tag" != "v${project_version}" ]]; then
             echo "Tag ${tag} does not match project version ${project_version}" >&2
             exit 1
