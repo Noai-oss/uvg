@@ -1,0 +1,100 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without v; leave empty to use git-cliff"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Determine release version
+        id: release-version
+        shell: bash -e -u -o pipefail {0}
+        run: |
+          input_version="${{ inputs.version }}"
+
+          if [[ -n "$input_version" ]]; then
+            version="${input_version#v}"
+            tag="v${version}"
+          else
+            tag="$(uvx --from git-cliff git-cliff --config pyproject.toml --bumped-version)"
+            version="${tag#v}"
+            tag="v${version}"
+          fi
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9.+-]+)?$ ]]; then
+            echo "Invalid release version: ${version}" >&2
+            exit 1
+          fi
+
+          if git rev-parse --verify --quiet "$tag" >/dev/null; then
+            echo "Tag already exists: ${tag}" >&2
+            exit 1
+          fi
+
+          {
+            echo "version=${version}"
+            echo "tag=${tag}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update project version
+        run: uv version "${{ steps.release-version.outputs.version }}" --no-sync
+
+      - name: Update changelog
+        shell: bash -e -u -o pipefail {0}
+        run: |
+          tag="${{ steps.release-version.outputs.tag }}"
+
+          if git describe --tags --match "v[0-9]*" --abbrev=0 >/dev/null 2>&1; then
+            uvx --from git-cliff git-cliff \
+              --config pyproject.toml \
+              --unreleased \
+              --tag "$tag" \
+              --prepend CHANGELOG.md
+          else
+            uvx --from git-cliff git-cliff \
+              --config pyproject.toml \
+              --unreleased \
+              --tag "$tag" \
+              -o CHANGELOG.md
+          fi
+
+      - name: Create release pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: |
+            CHANGELOG.md
+            pyproject.toml
+            uv.lock
+          branch: chore/prepare-${{ steps.release-version.outputs.tag }}
+          commit-message: "chore(release): 🔧 prepare for ${{ steps.release-version.outputs.tag }}"
+          title: "chore(release): 🔧 prepare for ${{ steps.release-version.outputs.tag }}"
+          body: |
+            Prepare release ${{ steps.release-version.outputs.tag }}.
+
+            This updates the package version and prepends the generated changelog entry.
+          delete-branch: true
+          token: ${{ secrets.PAT }}
