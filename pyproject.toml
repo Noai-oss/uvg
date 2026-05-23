@@ -20,6 +20,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "git-cliff>=2.13.1",
     "pytest>=9.0.3",
     "ruff>=0.15.11",
     "ty>=0.0.31",
@@ -100,6 +101,8 @@ filter_unconventional = true
 require_conventional = false
 split_commits = false
 commit_preprocessors = [
+  # Remove gitmoji from commit messages, both actual Unicode emoji and :emoji: aliases.
+  { pattern = ' *(:\w+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}](?:\u{FE0F})?\u{200D}?) *', replace = "" },
   { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "([#${2}](<REPO>/issues/${2}))" },
   { pattern = '.*', replace_command = 'typos --write-changes -' },
 ]
