@@ -1,6 +1,6 @@
 [project]
 name = "uvg"
-version = "0.1.0"
+version = "0.1.1"
 description = "A global virtual environment manager built on top of uv"
 readme = "README.md"
 authors = [
