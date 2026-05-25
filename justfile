@@ -22,19 +22,19 @@ build:
 
 # Show the next version inferred from conventional commits
 next-version:
-	@uvx --from git-cliff git-cliff --config pyproject.toml --bumped-version
+	@uv run git-cliff --bumped-version
 
 # Generate the full changelog
 changelog:
-	@uvx --from git-cliff git-cliff --config pyproject.toml -o CHANGELOG.md
+	@uv run git-cliff -o CHANGELOG.md
 
 # Print the unreleased changelog for a release tag
 changelog-unreleased tag:
-	@uvx --from git-cliff git-cliff --config pyproject.toml --unreleased --tag {{tag}}
+	@uv run git-cliff --unreleased --tag {{tag}}
 
 # Prepend the unreleased changelog for a release tag to CHANGELOG.md
 changelog-prepend tag:
-	@uvx --from git-cliff git-cliff --config pyproject.toml --unreleased --tag {{tag}} --prepend CHANGELOG.md
+	@uv run git-cliff --unreleased --tag {{tag}} --prepend CHANGELOG.md
 
 # Clean up build artifacts and cache directories
 clean:
