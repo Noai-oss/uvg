@@ -20,4 +20,5 @@ jobs:
           GITHUB_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
         run: |
           printf '%s\n' "$GITHUB_PULL_REQUEST_TITLE" > pr_title.txt
-          uvx --from git+https://github.com/Noai-oss/odev.git@cd36de80bdbfc5e9b2c84f15210823562b87aa9d odev-commit-msg pr_title.txt
+          uvx --from git+https://github.com/Noai-oss/odev.git@881a3faba06e24bd6895acc27d5dfe7e78fe8175 odev-pr-title-check pr_title.txt
+
