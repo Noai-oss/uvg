@@ -9,6 +9,9 @@ Set `UVG_HOME` to move the uvg home directory.
 ## Installation
 
 ```bash
+# from pypi
+uv tool install uvg
+# local install
 uv tool install .
 # or
 uv tool install git+https://github.com/Noai-oss/uvg
