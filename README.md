@@ -9,7 +9,7 @@ Set `UVG_HOME` to move the uvg home directory.
 ## Installation
 
 ```bash
-# from pypi
+# from PyPI
 uv tool install uvg
 # local install
 uv tool install .
