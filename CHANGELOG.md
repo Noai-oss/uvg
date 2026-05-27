@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.3](https://github.com/Noai-oss/uvg/compare/v0.1.2..v0.1.3) - 2026-05-27
+
+### 🐛 Bug Fixes
+
+- Migrate typer 0.26 click handling ([#27](https://github.com/Noai-oss/uvg/issues/27)) - ([993def9](https://github.com/Noai-oss/uvg/commit/993def900b8181d764b4b4b04592ccb2cf21a8f4))
+- Fix `git-cliff`'s config in ci ([#29](https://github.com/Noai-oss/uvg/issues/29)) - ([48ed94d](https://github.com/Noai-oss/uvg/commit/48ed94dd0b057d0f55895ec3a9641fb2956c208c))
+
+### 📦 Build
+
+- Move git-cliff config to cliff.toml ([#22](https://github.com/Noai-oss/uvg/issues/22)) - ([63d82e8](https://github.com/Noai-oss/uvg/commit/63d82e813b022e7f47663aa6ddd52de7ca207e2a))
+
+### 👷 CI
+
+- Delete useless `lock_upgrade` workflow ([#24](https://github.com/Noai-oss/uvg/issues/24)) - ([41ada0d](https://github.com/Noai-oss/uvg/commit/41ada0dcd28cd7e52b948a6fea496922635ba945))
+
+
 ## [0.1.2](https://github.com/Noai-oss/uvg/compare/v0.1.1..v0.1.2) - 2026-05-23
 
 ### 🎉 Features
