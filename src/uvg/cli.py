@@ -35,7 +35,7 @@ def callback_func(
     ),
 ):
     if shutil.which("uv") is None:
-        raise UvgError("Error: Not found 'uv', please install it first.")
+        raise UvgError("Not found 'uv', please install it first.")
 
 
 app.add_typer(create.app)
