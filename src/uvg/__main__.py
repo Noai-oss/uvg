@@ -3,8 +3,8 @@ from __future__ import annotations
 import sys
 from collections.abc import Sequence
 
-import click
 import typer
+from typer._click.exceptions import ClickException
 
 from uvg.cli import app
 from uvg.core.errors import UvgError
@@ -17,7 +17,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     except typer.Exit as exc:
         return exc.exit_code
-    except click.ClickException as exc:
+    except ClickException as exc:
         exc.show(file=sys.stderr)
         return exc.exit_code
     except (KeyboardInterrupt, typer.Abort):
