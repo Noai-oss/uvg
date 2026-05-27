@@ -14,9 +14,16 @@ def _show_cli_exception(exc: Exception) -> int | None:
     show = getattr(exc, "show", None)
     exit_code = getattr(exc, "exit_code", None)
 
-    if callable(show) and isinstance(exit_code, int):
-        show(file=sys.stderr)
-        return exit_code
+    if (
+        callable(show)
+        and isinstance(exit_code, int)
+        and not isinstance(exit_code, bool)
+    ):
+        try:
+            show(file=sys.stderr)
+            return exit_code
+        except Exception:
+            return None
 
     return None
 

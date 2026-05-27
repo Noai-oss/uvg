@@ -36,6 +36,20 @@ def test_main_returns_error_when_uv_missing(mock_which, capsys):
     assert "Error: Not found 'uv', please install it first." in capsys.readouterr().err
 
 
+def test_main_reraises_non_cli_exceptions_with_incompatible_show():
+    class NonCliError(Exception):
+        exit_code = 2
+
+        def show(self):
+            raise AssertionError("This should not replace the original exception.")
+
+    with (
+        patch("uvg.__main__.app", side_effect=NonCliError("boom")),
+        pytest.raises(NonCliError, match="boom"),
+    ):
+        main([])
+
+
 @patch("uvg.cli.shutil.which")
 def test_command_should_fail_when_uv_missing(mock_which):
     mock_which.side_effect = lambda executable: (
