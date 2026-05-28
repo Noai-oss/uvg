@@ -57,6 +57,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           uvx --with typos --from git-cliff git-cliff \
+            --config pyproject.toml \
             --current \
             --strip header \
             -o release-notes.md
