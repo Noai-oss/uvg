@@ -23,4 +23,4 @@ permissions:
 
 jobs:
   semantic-pull-request:
-    uses: Noai-oss/CI-templates/.github/workflows/_semantic_pull_request.yml
+    uses: Noai-oss/CI-templates/.github/workflows/_semantic_pull_request.yml@v0.1.0
