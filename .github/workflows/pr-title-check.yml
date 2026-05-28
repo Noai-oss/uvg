@@ -1,24 +1,26 @@
-name: PR Title Check
+name: Validate PR title
 
 on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
   pull_request:
-    types: [opened, edited, synchronize]
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+defaults:
+  run:
+    shell: bash -x -e -u -o pipefail {0}
+
+permissions:
+  pull-requests: read
 
 jobs:
-  check-title:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: false
-          ignore-empty-workdir: true
-
-      - name: Check PR Title
-        shell: bash -e -u -o pipefail {0}
-        env:
-          GITHUB_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          printf '%s\n' "$GITHUB_PULL_REQUEST_TITLE" > pr_title.txt
-          uvx --from git+https://github.com/Noai-oss/odev.git@881a3faba06e24bd6895acc27d5dfe7e78fe8175 odev-pr-title-check pr_title.txt
-
+  semantic-pull-request:
+    uses: Noai-oss/CI-templates/.github/workflows/_semantic_pull_request.yml
