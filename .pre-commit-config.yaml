@@ -23,11 +23,9 @@ repos:
       # Run the formatter.
       - id: ruff-format
 
-  - repo: local
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
     hooks:
-      - id: commit-style-check
-        name: Custom commit message style check
-        entry: odev-commit-msg
-        language: python
-        additional_dependencies: ['git+https://github.com/Noai-oss/odev.git@cd36de80bdbfc5e9b2c84f15210823562b87aa9d']
+      - id: conventional-pre-commit
         stages: [commit-msg]
+        args: [--verbose]
