@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.4](https://github.com/Noai-oss/uvg/compare/v0.1.3..v0.1.4) - 2026-06-03
+
+### 👷 CI
+
+- Add `semantic-pull-request` workflow ([#30](https://github.com/Noai-oss/uvg/issues/30)) - ([022addc](https://github.com/Noai-oss/uvg/commit/022addc4f986d2a9d20f5f12376eb1d90d16550e))
+- Add dynamic-version release pipeline ([#34](https://github.com/Noai-oss/uvg/issues/34)) - ([889d685](https://github.com/Noai-oss/uvg/commit/889d6854a6fb8a6720e9dafcff4e14368c4c25f4))
+- Remove cliff typos preprocessor ([#35](https://github.com/Noai-oss/uvg/issues/35)) - ([611ca72](https://github.com/Noai-oss/uvg/commit/611ca72e018fd30544b3649092775607e4e08a6c))
+
+### 🔧 Maintenance
+
+- Update `dependabot.yml` ([#33](https://github.com/Noai-oss/uvg/issues/33)) - ([ccbd1d0](https://github.com/Noai-oss/uvg/commit/ccbd1d02ad2e233f752d353cb6012c1d5d192186))
+
+## ❤️ New Contributors
+
+* @dependabot[bot] made their first contribution in [#32](https://github.com/Noai-oss/uvg/pull/32)
+
 ## [0.1.3](https://github.com/Noai-oss/uvg/compare/v0.1.2..v0.1.3) - 2026-05-27
 
 ### 🐛 Bug Fixes
