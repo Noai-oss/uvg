@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version without v; leave empty to use git-cliff"
+        description: 'Release version (e.g., 0.2.0). Leave empty to auto-determine from conventional commits.'
         required: false
         type: string
 
@@ -138,7 +138,7 @@ jobs:
 
           ## Checklist (in order)
 
-          1. [ ] Apply or re-apply the \`bot-run\` label to trigger PR workflows
+          1. [ ] Apply the \`bot-run\` label to trigger PR workflows
           2. [ ] Inspect CHANGELOG.md
           3. [ ] Confirm required checks pass
           4. [ ] Review and merge
