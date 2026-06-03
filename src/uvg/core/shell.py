@@ -1,23 +1,30 @@
+"""Shell detection, profile integration, and activation rendering."""
+
 from __future__ import annotations
 
 import shlex
 import sys
-from enum import Enum
-from pathlib import Path
-from typing import Literal, TypeAlias
+from enum import StrEnum
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-class ShellName(str, Enum):
+class ShellName(StrEnum):
+    """Shells supported by uvg integration helpers."""
+
     bash = "bash"
     zsh = "zsh"
     pwsh = "pwsh"
 
     @property
     def is_posix(self) -> bool:
+        """Return whether the shell uses POSIX-style activation."""
         return self in {ShellName.bash, ShellName.zsh}
 
 
-PosixShellName: TypeAlias = Literal[ShellName.bash, ShellName.zsh]
+type PosixShellName = Literal[ShellName.bash, ShellName.zsh]
 
 IS_WINDOWS = sys.platform == "win32"
 
@@ -111,7 +118,8 @@ function uvg {
 
 
 def append_shell_integration_to_profile(
-    shell_name: ShellName, profile_path: Path
+    shell_name: ShellName,
+    profile_path: Path,
 ) -> bool:
     """Append shell integration snippet to a shell profile file."""
     initialization_command = build_profile_initialization_command(shell_name)
@@ -176,11 +184,7 @@ def build_activation_script_path(environment_path: Path, shell_name: ShellName) 
 
     if shell_name in {ShellName.bash, ShellName.zsh}:
         script_path = scripts_dir / "activate"
-        return (
-            convert_windows_path_to_msys_path(script_path)
-            if IS_WINDOWS
-            else str(script_path)
-        )
+        return convert_windows_path_to_msys_path(script_path) if IS_WINDOWS else str(script_path)
 
     return str(scripts_dir / "Activate.ps1")
 
@@ -193,6 +197,7 @@ def _quote_pwsh_string_literal(value: str) -> str:
 def convert_windows_path_to_msys_path(path: Path) -> str:
     """Convert C:/style paths to /c/style paths for MSYS-like shells."""
     posix_path = path.as_posix()
-    if len(posix_path) >= 3 and posix_path[1:3] == ":/":
-        return f"/{posix_path[0].lower()}{posix_path[2:]}"
+    drive = path.drive
+    if drive.endswith(":"):
+        return f"/{drive[:-1].lower()}{posix_path.removeprefix(drive)}"
     return posix_path

@@ -1,9 +1,10 @@
+"""Show the currently active managed environment."""
+
 from __future__ import annotations
 
 import typer
 
 from uvg.core.environment import get_current_name
-
 
 app = typer.Typer()
 

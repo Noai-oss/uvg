@@ -1,3 +1,5 @@
+"""Create managed virtual environments."""
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -5,7 +7,6 @@ from typing import Annotated
 import typer
 
 from uvg.core.environment import create
-
 
 app = typer.Typer()
 

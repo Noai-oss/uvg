@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -10,14 +10,16 @@ from uvg.core.errors import UvgError
 runner = CliRunner()
 
 
-def test_version_option():
+def test_version_option() -> None:
     result = runner.invoke(app, ["--version"])
 
     assert result.exit_code == 0
     assert "uvg v" in result.output
 
 
-def test_main_returns_usage_exit_code_for_cli_errors(capsys):
+def test_main_returns_usage_exit_code_for_cli_errors(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     exit_code = main(["does-not-exist"])
 
     assert exit_code == 2
@@ -25,10 +27,11 @@ def test_main_returns_usage_exit_code_for_cli_errors(capsys):
 
 
 @patch("uvg.cli.shutil.which")
-def test_main_returns_error_when_uv_missing(mock_which, capsys):
-    mock_which.side_effect = lambda executable: (
-        None if executable == "uv" else executable
-    )
+def test_main_returns_error_when_uv_missing(
+    mock_which: MagicMock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    mock_which.side_effect = lambda executable: None if executable == "uv" else executable
 
     exit_code = main(["env", "list"])
 
@@ -37,10 +40,8 @@ def test_main_returns_error_when_uv_missing(mock_which, capsys):
 
 
 @patch("uvg.cli.shutil.which")
-def test_command_should_fail_when_uv_missing(mock_which):
-    mock_which.side_effect = lambda executable: (
-        None if executable == "uv" else executable
-    )
+def test_command_should_fail_when_uv_missing(mock_which: MagicMock) -> None:
+    mock_which.side_effect = lambda executable: None if executable == "uv" else executable
 
     with pytest.raises(UvgError) as exc_info:
         runner.invoke(app, ["env", "list"], catch_exceptions=False)

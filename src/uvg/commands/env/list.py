@@ -1,9 +1,10 @@
+"""List managed virtual environments."""
+
 from __future__ import annotations
 
 import typer
 
 from uvg.core.environment import build_path, list_names, read_python_version
-
 
 app = typer.Typer()
 
