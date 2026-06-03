@@ -7,9 +7,15 @@ on:
   pull_request:
     branches:
       - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
 
 jobs:
   ci-test:
+    if: github.event.action != 'labeled' || github.event.label.name == 'bot-run'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:

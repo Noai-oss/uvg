@@ -7,12 +7,14 @@ on:
       - edited
       - synchronize
       - reopened
+      - labeled
   pull_request:
     types:
       - opened
       - edited
       - synchronize
       - reopened
+      - labeled
 
 defaults:
   run:
@@ -23,4 +25,5 @@ permissions:
 
 jobs:
   semantic-pull-request:
+    if: github.event.action != 'labeled' || github.event.label.name == 'bot-run'
     uses: Noai-oss/CI-templates/.github/workflows/_semantic_pull_request.yml@v0.1.0
