@@ -1,6 +1,21 @@
 # Changelog
 
+## [0.1.5](https://github.com/Noai-oss/uvg/compare/v0.1.4..v0.1.5) - 2026-06-03
+
+### 👷 CI
+
+- Simplify the release workflow ([#37](https://github.com/Noai-oss/uvg/issues/37)) - ([0ec9104](https://github.com/Noai-oss/uvg/commit/0ec9104db5a546418f6f2cb851a59a8857b22241))
+
+### 🔧 Maintenance
+
+- Enable strict ruff rules ([#38](https://github.com/Noai-oss/uvg/issues/38)) - ([2e1f966](https://github.com/Noai-oss/uvg/commit/2e1f966d7c61f03620a37029abb48fb274808caf))
+
+
 ## [0.1.4](https://github.com/Noai-oss/uvg/compare/v0.1.3..v0.1.4) - 2026-06-03
+
+### 📝 Documentation
+
+- Update changelog for v0.1.4 ([#36](https://github.com/Noai-oss/uvg/issues/36)) - ([dda568d](https://github.com/Noai-oss/uvg/commit/dda568dae4d4c23bca97f436c8bc0a92cbd81140))
 
 ### 👷 CI
 
@@ -14,6 +29,7 @@
 
 ## ❤️ New Contributors
 
+* @github-actions[bot] made their first contribution in [#36](https://github.com/Noai-oss/uvg/pull/36)
 * @dependabot[bot] made their first contribution in [#32](https://github.com/Noai-oss/uvg/pull/32)
 
 ## [0.1.3](https://github.com/Noai-oss/uvg/compare/v0.1.2..v0.1.3) - 2026-05-27
