@@ -1,7 +1,9 @@
+"""Initialize shell integration for uvg."""
+
 from __future__ import annotations
 
 import sys
-from pathlib import Path
+from pathlib import Path  # noqa: TC003
 from typing import Annotated
 
 import typer
@@ -13,7 +15,6 @@ from uvg.core.shell import (
     convert_windows_path_to_msys_path,
     render_shell_integration_script,
 )
-
 
 app = typer.Typer()
 
@@ -34,7 +35,7 @@ def initialize_shell_integration_command(
     if profile_path is None:
         script_content = render_shell_integration_script(shell_name) + "\n"
         # Shell integration output is shell code consumed by eval/Invoke-Expression.
-        sys.stdout.buffer.write(script_content.encode("utf-8"))
+        sys.stdout.buffer.write(script_content.encode())
         return
 
     expanded_profile_path = profile_path.expanduser()
@@ -53,6 +54,6 @@ def initialize_shell_integration_command(
         else str(expanded_profile_path)
     )
     typer.echo(
-        f"Successfully appended uvg initialization to {expanded_profile_path_str}"
+        f"Successfully appended uvg initialization to {expanded_profile_path_str}",
     )
     typer.echo("Please restart your shell or source your profile to apply changes.")

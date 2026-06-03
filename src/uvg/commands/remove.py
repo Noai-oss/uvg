@@ -1,3 +1,5 @@
+"""Remove managed virtual environments."""
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -6,13 +8,13 @@ import typer
 
 from uvg.core.environment import remove
 
-
 app = typer.Typer()
 
 
 @app.command("remove")
 def remove_environment_command(
     environment_name: Annotated[str, typer.Argument(help="Environment name")],
+    *,
     assume_yes: Annotated[
         bool,
         typer.Option("--yes", "-y", help="Remove without confirmation"),

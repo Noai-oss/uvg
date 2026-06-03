@@ -1,3 +1,5 @@
+"""Custom exceptions for uvg."""
+
 from __future__ import annotations
 
 

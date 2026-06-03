@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from importlib.metadata import distribution
 import os
+from importlib.metadata import distribution
 
 import uvg
 from uvg.__main__ import main as cli_main

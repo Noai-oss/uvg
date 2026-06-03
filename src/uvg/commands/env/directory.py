@@ -1,9 +1,10 @@
+"""Show the managed environments directory."""
+
 from __future__ import annotations
 
 import typer
 
 from uvg.core.environment import get_venvs_dir
-
 
 app = typer.Typer()
 

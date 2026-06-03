@@ -1,3 +1,5 @@
+"""Typer application wiring for the uvg CLI."""
+
 from __future__ import annotations
 
 import shutil
@@ -17,15 +19,16 @@ app = typer.Typer(
 )
 
 
-def version_callback(value: bool):
+def version_callback(value: bool) -> None:  # noqa: FBT001
+    """Print the version and exit when the version option is set."""
     if value:
         typer.echo(f"uvg v{__version__}")
-        raise typer.Exit()
+        raise typer.Exit
 
 
 @app.callback()
 def callback_func(
-    version: bool = typer.Option(
+    _version: bool = typer.Option(  # noqa: FBT001
         None,
         "--version",
         "-v",
@@ -33,7 +36,8 @@ def callback_func(
         callback=version_callback,
         is_eager=True,
     ),
-):
+) -> None:
+    """Validate command prerequisites before running subcommands."""
     if shutil.which("uv") is None:
         raise UvgError("Not found 'uv', please install it first.")
 

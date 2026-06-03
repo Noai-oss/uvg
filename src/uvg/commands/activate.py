@@ -1,3 +1,5 @@
+"""Generate shell activation commands for managed environments."""
+
 from __future__ import annotations
 
 import sys
@@ -11,7 +13,6 @@ from uvg.core.shell import (
     get_default_shell_type_for_current_platform,
     render_activation_command,
 )
-
 
 app = typer.Typer()
 
@@ -35,4 +36,4 @@ def activate_environment_command(
         resolved_shell_name,
     )
     # Activation output is shell code consumed by eval/Invoke-Expression.
-    sys.stdout.buffer.write(f"{activation_command}\n".encode("utf-8"))
+    sys.stdout.buffer.write(f"{activation_command}\n".encode())

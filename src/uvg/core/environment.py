@@ -1,3 +1,5 @@
+"""Filesystem and uv integration for managed environments."""
+
 from __future__ import annotations
 
 import os
@@ -8,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .errors import UvgError
-
 
 # ============================================================================
 # Layout
@@ -27,6 +28,8 @@ NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 @dataclass(frozen=True, slots=True)
 class EnvironmentInfo:
+    """Metadata for a managed environment."""
+
     name: str
     path: Path
     python_executable: Path
@@ -98,7 +101,7 @@ def validate_name(environment_name: str) -> str:
 
     if not NAME_PATTERN.fullmatch(normalized_environment_name):
         raise UvgError(
-            "Environment name may only contain letters, numbers, dots, underscores, and hyphens."
+            "Environment name may only contain letters, numbers, dots, underscores, and hyphens.",
         )
 
     return normalized_environment_name
@@ -123,7 +126,7 @@ def get_current_name(*, silent: bool = False) -> str | None:
             return None
         raise UvgError(
             "An active virtual environment was found, but it is not managed by uvg.\n"
-            f"Path: {active_virtual_environment_path}"
+            f"Path: {active_virtual_environment_path}",
         )
 
     environment_name = extract_name_from_path(active_virtual_environment_path)
@@ -163,7 +166,7 @@ def resolve_path(environment_name: str) -> Path:
         raise UvgError(f"Environment '{normalized_environment_name}' does not exist.")
     if not managed_environment_path.is_dir():
         raise UvgError(
-            f"Path for environment '{normalized_environment_name}' exists but is not a directory."
+            f"Path for environment '{normalized_environment_name}' exists but is not a directory.",
         )
 
     return managed_environment_path
@@ -177,7 +180,7 @@ def remove(environment_name: str) -> None:
     if get_current_name(silent=True) == normalized_environment_name:
         raise UvgError(
             f"Environment '{normalized_environment_name}' is currently active. "
-            "Deactivate it before removing."
+            "Deactivate it before removing.",
         )
 
     shutil.rmtree(managed_environment_path)
@@ -206,7 +209,7 @@ def create(
         create_environment_command.extend(["--python", python_version])
 
     try:
-        completed_process = subprocess.run(
+        completed_process = subprocess.run(  # noqa: S603
             create_environment_command,
             capture_output=True,
             check=False,
@@ -214,14 +217,14 @@ def create(
         )
     except FileNotFoundError as exc:
         raise UvgError(
-            "The `uv` executable was not found. Install `uv` and ensure it is available on PATH."
+            "The `uv` executable was not found. Install `uv` and ensure it is available on PATH.",
         ) from exc
 
     if completed_process.returncode != 0:
         standard_error_output = (completed_process.stderr or "").strip()
         raise UvgError(
             f"Failed to create environment '{normalized_environment_name}'."
-            + (f"\n{standard_error_output}" if standard_error_output else "")
+            + (f"\n{standard_error_output}" if standard_error_output else ""),
         )
 
     return managed_environment_path

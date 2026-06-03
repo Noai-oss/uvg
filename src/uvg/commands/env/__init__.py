@@ -1,10 +1,11 @@
+"""Environment-related uvg subcommands."""
+
 from __future__ import annotations
 
 import typer
 
 from uvg.commands.env import current, directory
 from uvg.commands.env import list as list_command
-
 
 app = typer.Typer(
     name="env",

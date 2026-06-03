@@ -1,7 +1,9 @@
+"""Command-line entry point for uvg."""
+
 from __future__ import annotations
 
 import sys
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import typer
 from typer._click.exceptions import ClickException
@@ -9,12 +11,14 @@ from typer._click.exceptions import ClickException
 from uvg.cli import app
 from uvg.core.errors import UvgError
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Main entry point for the uvg CLI."""
+    """Run the uvg CLI."""
     try:
         app(prog_name="uvg", args=argv, standalone_mode=False)
-        return 0
     except typer.Exit as exc:
         return exc.exit_code
     except ClickException as exc:
@@ -26,6 +30,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     except UvgError as exc:
         typer.echo(f"Error: {exc}", err=True)
         return 1
+    else:
+        return 0
 
 
 if __name__ == "__main__":
