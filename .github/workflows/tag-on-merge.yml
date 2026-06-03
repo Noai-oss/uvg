@@ -14,6 +14,8 @@ jobs:
       actions: write
     if: >-
       github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == github.event.repository.default_branch &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       startsWith(github.event.pull_request.head.ref, 'release/v')
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -37,7 +39,7 @@ jobs:
 
           # Verify tag doesn't already exist
           if gh api "repos/$REPO/git/refs/tags/$TAG" &>/dev/null; then
-            echo "ERROR: Tag $TAG already exists"
+            echo "::error::Tag $TAG already exists"
             exit 1
           fi
 
@@ -79,7 +81,7 @@ jobs:
           done
 
           if [[ -z "$run_id" || "$run_id" == "null" ]]; then
-            echo "::error::Could not find the release workflow run for $tag"
+            echo "::error::Could not find the release workflow run for $TAG"
             exit 1
           fi
 
