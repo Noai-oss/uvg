@@ -11,3 +11,5 @@ wheels/
 
 # IDE
 .idea
+
+src/uvg/_version.py

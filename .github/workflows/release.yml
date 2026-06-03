@@ -1,23 +1,166 @@
 name: Release
 
 on:
+  workflow_dispatch: {}
   push:
     tags:
       - "v*"
+
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  github-release:
+  build:
+    name: Build and Test Distributions
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      skip: ${{ steps.version.outputs.skip }}
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Extract version
+        id: version
+        shell: bash -e -u -o pipefail {0}
+        run: |
+          if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
+            echo "::warning::Skipping release - this workflow must run on a v* tag (got $GITHUB_REF). Use workflow_dispatch from a tag, not a branch."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          version="${GITHUB_REF#refs/tags/v}"
+          tag="${GITHUB_REF#refs/tags/}"
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9.+-]+)?$ ]]; then
+            echo "::error::Invalid release tag: $tag"
+            exit 1
+          fi
+
+          {
+            echo "skip=false"
+            echo "version=$version"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install uv
+        if: steps.version.outputs.skip != 'true'
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install Python
+        if: steps.version.outputs.skip != 'true'
+        run: uv python install
+
+      - name: Install project
+        if: steps.version.outputs.skip != 'true'
+        run: uv sync --locked
+
+      - name: Run tests
+        if: steps.version.outputs.skip != 'true'
+        run: uv run pytest .
+
+      - name: Build distributions
+        if: steps.version.outputs.skip != 'true'
+        run: uv build --no-sources
+
+      - name: Validate distribution version
+        if: steps.version.outputs.skip != 'true'
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
+        shell: bash -e -u -o pipefail {0}
+        run: |
+          python - <<'PY'
+          from email.parser import Parser
+          from pathlib import Path
+          import os
+          import tarfile
+          import zipfile
+
+          expected = os.environ["EXPECTED_VERSION"]
+          versions: dict[str, str] = {}
+
+          for path in Path("dist").glob("*.whl"):
+              with zipfile.ZipFile(path) as archive:
+                  metadata_paths = [
+                      name for name in archive.namelist()
+                      if name.endswith(".dist-info/METADATA")
+                  ]
+                  if len(metadata_paths) != 1:
+                      raise SystemExit(f"{path}: expected one METADATA file, found {len(metadata_paths)}")
+                  metadata = Parser().parsestr(archive.read(metadata_paths[0]).decode())
+                  versions[path.name] = metadata["Version"]
+
+          for path in Path("dist").glob("*.tar.gz"):
+              with tarfile.open(path) as archive:
+                  metadata_members = [
+                      member for member in archive.getmembers()
+                      if member.name.endswith("/PKG-INFO")
+                  ]
+                  if len(metadata_members) != 1:
+                      raise SystemExit(f"{path}: expected one PKG-INFO file, found {len(metadata_members)}")
+                  fileobj = archive.extractfile(metadata_members[0])
+                  if fileobj is None:
+                      raise SystemExit(f"{path}: could not read PKG-INFO")
+                  metadata = Parser().parsestr(fileobj.read().decode())
+                  versions[path.name] = metadata["Version"]
+
+          if not versions:
+              raise SystemExit("No distributions were built")
+
+          mismatches = {
+              name: version
+              for name, version in versions.items()
+              if version != expected
+          }
+          if mismatches:
+              details = ", ".join(
+                  f"{name} has {version}" for name, version in sorted(mismatches.items())
+              )
+              raise SystemExit(f"Tag version {expected} does not match built distributions: {details}")
+
+          print(f"Validated {len(versions)} distribution(s) at version {expected}")
+          PY
+
+      - name: Smoke test wheel
+        if: steps.version.outputs.skip != 'true'
+        run: uv run --isolated --no-project --with dist/*.whl tests/smoke_test.py
+
+      - name: Smoke test source distribution
+        if: steps.version.outputs.skip != 'true'
+        run: uv run --isolated --no-project --with dist/*.tar.gz tests/smoke_test.py
+
+      - name: Upload distributions
+        if: steps.version.outputs.skip != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+
+  github-release:
+    name: Create GitHub Release
+    needs: build
+    if: needs.build.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout code
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -25,61 +168,47 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Validate release tag
-        shell: bash -e -u -o pipefail {0}
-        run: |
-          tag="${GITHUB_REF_NAME}"
-          version="${tag#v}"
-          project_version="$(uv version --short)"
-
-          if [[ "$tag" == "$version" ]]; then
-            echo "Release tags must start with v: ${tag}" >&2
-            exit 1
-          fi
-
-          if [[ "$project_version" != "$version" ]]; then
-            echo "Tag ${tag} does not match project version ${project_version}" >&2
-            exit 1
-          fi
-
-      - name: Install project
-        run: uv sync --locked
-
-      - name: Run tests
-        run: uv run pytest .
-
-      - name: Build distributions
-        run: uv build --no-sources
+      - name: Download distributions
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
 
       - name: Generate release notes
         env:
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
+        shell: bash -e -u -o pipefail {0}
         run: |
           uvx --with typos --from git-cliff git-cliff \
             --current \
             --strip header \
-            -o release-notes.md
+            -o release-notes.md || {
+              echo "Release ${{ needs.build.outputs.tag }}" > release-notes.md
+              echo "" >> release-notes.md
+              echo "See CHANGELOG.md for details." >> release-notes.md
+            }
 
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
         shell: bash -e -u -o pipefail {0}
         run: |
-          tag="${GITHUB_REF_NAME}"
-
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release edit "$tag" --title "$tag" --notes-file release-notes.md
-            gh release upload "$tag" dist/* --clobber
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TAG" --notes-file release-notes.md
+            gh release upload "$TAG" dist/* --clobber
           else
-            gh release create "$tag" dist/* \
-              --title "$tag" \
+            gh release create "$TAG" dist/* \
+              --title "$TAG" \
               --notes-file release-notes.md \
               --verify-tag
           fi
 
   pypi-publish:
-    needs: github-release
+    name: Publish to PyPI
+    needs: build
+    if: needs.build.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -89,37 +218,14 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Install Python
-        run: uv python install
-
-      - name: Validate release tag
-        shell: bash -e -u -o pipefail {0}
-        run: |
-          tag="${GITHUB_REF_NAME}"
-          version="${tag#v}"
-          project_version="$(uv version --short)"
-
-          if [[ "$project_version" != "$version" ]]; then
-            echo "Tag ${tag} does not match project version ${project_version}" >&2
-            exit 1
-          fi
-
-      - name: Build distributions
-        run: uv build --no-sources
-
-      - name: Smoke test wheel
-        run: uv run --isolated --no-project --with dist/*.whl tests/smoke_test.py
-
-      - name: Smoke test source distribution
-        run: uv run --isolated --no-project --with dist/*.tar.gz tests/smoke_test.py
+      - name: Download distributions
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
 
       - name: Publish package to PyPI
-        run: uv publish
+        run: uv publish dist/*

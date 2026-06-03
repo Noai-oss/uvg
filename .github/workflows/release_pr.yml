@@ -1,0 +1,164 @@
+name: Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without v; leave empty to use git-cliff"
+        required: false
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-pr:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Install git-cliff
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
+        with:
+          config: cliff.toml
+          args: --version
+        env:
+          OUTPUT: /dev/null
+
+      - name: Determine version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ -n "$INPUT_VERSION" ]]; then
+            # Strip leading v if present for validation
+            VERSION="${INPUT_VERSION#v}"
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "ERROR: Version '$INPUT_VERSION' is not valid semver (expected: MAJOR.MINOR.PATCH, e.g. 0.2.0)"
+              exit 1
+            fi
+          else
+            VERSION=$(git-cliff --bumped-version 2>/dev/null || echo "")
+            if [[ -z "$VERSION" ]]; then
+              # Fall back to patch bump from latest tag
+              LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+              if [[ -n "$LATEST_TAG" ]]; then
+                LATEST="${LATEST_TAG#v}"
+                MAJOR="${LATEST%%.*}"
+                REST="${LATEST#*.}"
+                MINOR="${REST%%.*}"
+                PATCH="${REST#*.}"
+                PATCH=$((PATCH + 1))
+                VERSION="${MAJOR}.${MINOR}.${PATCH}"
+                echo "WARNING: No conventional commits detected — falling back to patch bump: $VERSION"
+              else
+                echo "::error::No conventional commits and no existing tags — nothing to release"
+                exit 1
+              fi
+            fi
+          fi
+          # Strip leading v if present
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Determined version: $VERSION (tag: v$VERSION)"
+
+      - name: Check tag does not exist
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git rev-parse "refs/tags/$TAG" &>/dev/null; then
+            echo "ERROR: Tag $TAG already exists"
+            exit 1
+          fi
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
+        with:
+          config: cliff.toml
+          args: --tag ${{ steps.version.outputs.tag }}
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Create release PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          BRANCH="release/$TAG"
+
+          # Check if branch already exists (local or remote)
+          if git ls-remote --exit-code --heads origin "$BRANCH" &>/dev/null; then
+            echo "::error::Branch '$BRANCH' already exists. A release PR may already be open — close it and delete the branch to re-run."
+            exit 1
+          fi
+
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add CHANGELOG.md
+          if git diff --cached --quiet CHANGELOG.md; then
+            echo "::error::No releasable commits since last tag - CHANGELOG.md is already up to date. Push new conventional commits or adjust the requested version before rerunning this workflow."
+            exit 1
+          fi
+
+          git checkout -b "$BRANCH"
+          git commit -m "docs: update changelog for $TAG"
+          git push origin "$BRANCH"
+
+          label_args=()
+          for LABEL in "release" "bot-run"; do
+            if gh label list --search "$LABEL" --json name --jq '.[].name' | grep -qx "$LABEL"; then
+              label_args+=("--label" "$LABEL")
+            fi
+          done
+
+          # Draft PR because the github-actions[bot] does not trigger a pull_request_target workflow
+          gh pr create \
+            --title "docs: update changelog for $TAG" \
+            --draft \
+            --body "$(cat <<EOF
+          # Release $TAG
+
+          This pull request is for the $TAG release.
+
+          ## Checklist (in order)
+
+          1. [ ] Apply or re-apply the \`bot-run\` label to trigger PR workflows
+          2. [ ] Inspect CHANGELOG.md
+          3. [ ] Confirm required checks pass
+          4. [ ] Review and merge
+
+          ## Post Merge
+
+          * [ ] Verify $TAG tag
+          * [ ] Verify the release workflow completed
+          * [ ] Verify the GitHub Release contains the wheel and source distribution
+          * [ ] Verify the PyPI release is available
+
+          > [!CAUTION]
+          > Simply closing this will block a subsequent $TAG release, so delete the branch or reopen the pull request if necessary
+
+          **When merged**, the merge commit will be automatically tagged as \`$TAG\`, which triggers:
+          - \`release.yml\` — builds and tests the wheel/source distribution
+          - \`release.yml\` — creates or updates the GitHub Release
+          - \`release.yml\` — publishes the package to PyPI through Trusted Publishing
+
+          After the workflow completes, review the published artifacts.
+          EOF
+          )" \
+            "${label_args[@]}"
