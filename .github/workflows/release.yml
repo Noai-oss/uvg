@@ -98,8 +98,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
+      - name: Install typos
+        uses: try-chance/setup-typos@6cb948607bb29b6b2e7e89ac000a8524ca6bd862 # v0.0.1
 
       - name: Download distributions
         uses: actions/download-artifact@v7
@@ -108,19 +108,25 @@ jobs:
           path: dist
 
       - name: Generate release notes
+        id: release_notes
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
+        continue-on-error: true
+        with:
+          config: cliff.toml
+          args: --current --strip header
         env:
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
+          OUTPUT: release-notes.md
+
+      - name: Ensure release notes exist
         shell: bash -e -u -o pipefail {0}
         run: |
-          uvx --from git-cliff git-cliff \
-            --current \
-            --strip header \
-            -o release-notes.md || {
-              echo "Release ${{ needs.build.outputs.tag }}" > release-notes.md
-              echo "" >> release-notes.md
-              echo "See CHANGELOG.md for details." >> release-notes.md
-            }
+          if [[ ! -s release-notes.md ]]; then
+            echo "Release ${{ needs.build.outputs.tag }}" > release-notes.md
+            echo "" >> release-notes.md
+            echo "See CHANGELOG.md for details." >> release-notes.md
+          fi
 
       - name: Publish GitHub release
         env:
