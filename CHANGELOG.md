@@ -1,6 +1,17 @@
 # Changelog
 
+## [0.1.6](https://github.com/Noai-oss/uvg/compare/v0.1.5..v0.1.6) - 2026-06-04
+
+### 🐛 Bug Fixes
+
+- Restore typos for git-cliff workflows ([#42](https://github.com/Noai-oss/uvg/issues/42)) - ([7487634](https://github.com/Noai-oss/uvg/commit/7487634f6003b7cae8913fcc2ba6e2189aaf24d8))
+
+
 ## [0.1.5](https://github.com/Noai-oss/uvg/compare/v0.1.4..v0.1.5) - 2026-06-03
+
+### 📝 Documentation
+
+- Update changelog for v0.1.5 ([#39](https://github.com/Noai-oss/uvg/issues/39)) - ([aa3abfb](https://github.com/Noai-oss/uvg/commit/aa3abfbdf5179afd1390f9e3587f5ce60b0d37da))
 
 ### 👷 CI
 
