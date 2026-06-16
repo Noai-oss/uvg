@@ -26,4 +26,4 @@ permissions:
 jobs:
   semantic-pull-request:
     if: github.event.action != 'labeled' || github.event.label.name == 'bot-run'
-    uses: Noai-oss/CI-templates/.github/workflows/_semantic_pull_request.yml@v0.1.0
+    uses: Noai-oss/CI-templates/.github/workflows/_semantic_pull_request.yml@v0.1.1
