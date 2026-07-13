@@ -211,7 +211,7 @@ def create(
     try:
         completed_process = subprocess.run(  # noqa: S603
             create_environment_command,
-            capture_output=True,
+            capture_output=False,
             check=False,
             text=True,
         )
@@ -221,11 +221,7 @@ def create(
         ) from exc
 
     if completed_process.returncode != 0:
-        standard_error_output = (completed_process.stderr or "").strip()
-        raise UvgError(
-            f"Failed to create environment '{normalized_environment_name}'."
-            + (f"\n{standard_error_output}" if standard_error_output else ""),
-        )
+        raise UvgError(f"Failed to create environment '{normalized_environment_name}'.")
 
     return managed_environment_path
 
