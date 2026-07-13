@@ -208,17 +208,17 @@ def create(
     if python_version:
         create_environment_command.extend(["--python", python_version])
 
-    if shutil.which("uv") is None:
+    try:
+        completed_process = subprocess.run(  # noqa: S603
+            create_environment_command,
+            capture_output=False,
+            check=False,
+            text=True,
+        )
+    except FileNotFoundError as exc:
         raise UvgError(
             "The `uv` executable was not found. Install `uv` and ensure it is available on PATH.",
-        )
-
-    completed_process = subprocess.run(  # noqa: S603
-        create_environment_command,
-        capture_output=False,
-        check=False,
-        text=True,
-    )
+        ) from exc
 
     if completed_process.returncode != 0:
         raise UvgError(f"Failed to create environment '{normalized_environment_name}'.")

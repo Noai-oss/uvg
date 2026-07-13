@@ -115,7 +115,7 @@ class ManagedEnvironmentTests(unittest.TestCase):
                 "--python",
                 "3.12",
             ],
-            capture_output=True,
+            capture_output=False,
             check=False,
             text=True,
         )
