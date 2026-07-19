@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import shutil
-
 import typer
 
 from uvg import __version__
-from uvg.commands import activate, create, init, remove
+from uvg.commands import activate, create, deactivate, remove, setup, shell
 from uvg.commands.env import app as env_app
-from uvg.core.errors import UvgError
 
 app = typer.Typer(
     name="uvg",
@@ -37,13 +34,13 @@ def callback_func(
         is_eager=True,
     ),
 ) -> None:
-    """Validate command prerequisites before running subcommands."""
-    if shutil.which("uv") is None:
-        raise UvgError("Not found 'uv', please install it first.")
+    """Handle application-wide options."""
 
 
 app.add_typer(create.app)
 app.add_typer(remove.app)
-app.add_typer(init.app)
+app.add_typer(setup.app)
 app.add_typer(activate.app)
+app.add_typer(deactivate.app)
 app.add_typer(env_app, name="env", help="Commands for managing virtual environments")
+app.add_typer(shell.app, name="shell", help="Generate shell integration code")

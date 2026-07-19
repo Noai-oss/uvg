@@ -163,12 +163,15 @@ def resolve_path(environment_name: str) -> Path:
     managed_environment_path = build_path(normalized_environment_name)
 
     if not managed_environment_path.exists():
-        raise UvgError(f"Environment '{normalized_environment_name}' does not exist.")
+        raise UvgError(
+            f"Environment '{normalized_environment_name}' does not exist.\n"
+            "List environments with:\n"
+            "  uvg env list",
+        )
     if not managed_environment_path.is_dir():
         raise UvgError(
             f"Path for environment '{normalized_environment_name}' exists but is not a directory.",
         )
-
     return managed_environment_path
 
 
@@ -177,13 +180,24 @@ def remove(environment_name: str) -> None:
     normalized_environment_name = validate_name(environment_name)
     managed_environment_path = resolve_path(normalized_environment_name)
 
-    if get_current_name(silent=True) == normalized_environment_name:
-        raise UvgError(
-            f"Environment '{normalized_environment_name}' is currently active. "
-            "Deactivate it before removing.",
-        )
+    active_environment = os.environ.get("VIRTUAL_ENV")
+    if active_environment is not None:
+        try:
+            is_active_environment = Path(active_environment).samefile(managed_environment_path)
+        except OSError:
+            is_active_environment = False
+        if is_active_environment:
+            raise UvgError(
+                f"Environment '{normalized_environment_name}' is currently active. "
+                "Deactivate it before removing.",
+            )
 
-    shutil.rmtree(managed_environment_path)
+    try:
+        shutil.rmtree(managed_environment_path)
+    except OSError as exc:
+        raise UvgError(
+            f"Could not remove environment '{normalized_environment_name}': {exc}",
+        ) from exc
 
 
 # ============================================================================
@@ -197,14 +211,19 @@ def create(
 ) -> Path:
     """Create a new managed environment using uv venv."""
     ensure_layout()
-
     normalized_environment_name = validate_name(environment_name)
     managed_environment_path = build_path(normalized_environment_name)
 
     if managed_environment_path.exists():
         raise UvgError(f"Environment '{normalized_environment_name}' already exists.")
 
-    create_environment_command = ["uv", "venv", str(managed_environment_path), "--seed"]
+    create_environment_command = [
+        "uv",
+        "venv",
+        "--quiet",
+        str(managed_environment_path),
+        "--seed",
+    ]
     if python_version:
         create_environment_command.extend(["--python", python_version])
 
@@ -232,7 +251,12 @@ def read_python_version(environment_path: Path) -> str | None:
     if not pyvenv_cfg_path.exists():
         return None
 
-    for line in pyvenv_cfg_path.read_text(encoding="utf-8").splitlines():
+    try:
+        contents = pyvenv_cfg_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    for line in contents.splitlines():
         if "=" not in line:
             continue
         key, value = line.split("=", 1)
