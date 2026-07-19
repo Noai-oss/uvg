@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import shutil
 import stat
@@ -390,9 +391,10 @@ def test_failed_atomic_replace_leaves_original_profile_unchanged(tmp_path: Path)
 
 def test_setup_requires_explicit_profile() -> None:
     result = runner.invoke(app, ["setup", "bash"], color=False)
+    plain_output = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
 
     assert result.exit_code == 2
-    assert "--profile" in result.output
+    assert "--profile" in plain_output
 
 
 def test_setup_dry_run_does_not_create_profile_or_parent(tmp_path: Path) -> None:
@@ -590,8 +592,11 @@ def test_pwsh_loader_activates_and_deactivates_in_real_shell(tmp_path: Path) -> 
     python_line = next(
         line for line in completed_process.stdout.splitlines() if line.startswith("PYTHON=")
     )
+    expected_python_path = environment_path / (
+        Path("Scripts/python.exe") if IS_WINDOWS else Path("bin/python")
+    )
     assert os.path.normcase(os.path.normpath(python_line.removeprefix("PYTHON="))) == (
-        os.path.normcase(os.path.normpath(environment_path / "Scripts" / "python.exe"))
+        os.path.normcase(os.path.normpath(expected_python_path))
     )
     assert "INACTIVE=\n" in completed_process.stdout.replace("\r\n", "\n")
 
