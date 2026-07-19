@@ -61,7 +61,10 @@ def render_activation_command(environment_path: Path, shell_name: ShellName) -> 
 def get_activation_script_path(environment_path: Path, shell_name: ShellName) -> Path:
     """Return the native path to an environment activation script."""
     scripts_directory = environment_path / ("Scripts" if IS_WINDOWS else "bin")
-    script_name = "activate" if shell_name.is_posix else "Activate.ps1"
+    if shell_name.is_posix:
+        script_name = "activate"
+    else:
+        script_name = "Activate.ps1" if IS_WINDOWS else "activate.ps1"
     return scripts_directory / script_name
 
 

@@ -389,7 +389,7 @@ def test_failed_atomic_replace_leaves_original_profile_unchanged(tmp_path: Path)
 
 
 def test_setup_requires_explicit_profile() -> None:
-    result = runner.invoke(app, ["setup", "bash"])
+    result = runner.invoke(app, ["setup", "bash"], color=False)
 
     assert result.exit_code == 2
     assert "--profile" in result.output
@@ -489,6 +489,13 @@ def test_windows_activation_layout_uses_scripts_directory(tmp_path: Path) -> Non
     activation_path = get_activation_script_path(tmp_path / "tools", ShellName.pwsh)
 
     assert activation_path.parts[-2:] == ("Scripts", "Activate.ps1")
+
+
+@pytest.mark.skipif(IS_WINDOWS, reason="POSIX-specific activation layout")
+def test_posix_pwsh_activation_layout_uses_lowercase_script(tmp_path: Path) -> None:
+    activation_path = get_activation_script_path(tmp_path / "tools", ShellName.pwsh)
+
+    assert activation_path.parts[-2:] == ("bin", "activate.ps1")
 
 
 def test_marker_helpers_are_shell_specific() -> None:
