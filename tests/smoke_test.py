@@ -20,6 +20,7 @@ def main() -> None:
         entry_point.name == "uvg" and entry_point.value == "uvg.__main__:main"
         for entry_point in entry_points
     )
+    assert cli_main(["-h"]) == 0
     assert cli_main(["--help"]) == 0
 
 

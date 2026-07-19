@@ -117,7 +117,6 @@ def test_posix_profile_loader_loads_current_nonempty_hook_at_startup(
     loader = render_profile_loader(shell_name)
 
     assert f"command uvg shell hook {shell_name.value}" in loader
-    assert 'if [ -n "$_uvg_hook" ]' in loader
     assert 'eval "$_uvg_hook"' in loader
     assert "unset _uvg_hook" in loader
     assert "_UVG_SHELL_HOOK" not in loader
@@ -128,9 +127,7 @@ def test_pwsh_profile_loader_loads_current_nonempty_hook_at_startup() -> None:
 
     assert "Get-Command uvg -CommandType Application" in loader
     assert "shell hook pwsh" in loader
-    assert "[string]::IsNullOrWhiteSpace($uvgHookText)" in loader
-    assert "Invoke-Expression $uvgHookText" in loader
-    assert "Remove-Variable uvgCommand, uvgHook, uvgHookText" in loader
+    assert 'Invoke-Expression ($uvgHook -join "`n")' in loader
     assert "_UVG_SHELL_HOOK" not in loader
 
 
@@ -271,6 +268,7 @@ fi
                 "uvg activate tools",
                 'printf "ROUTED=%s\\n" "$UVG_ROUTED"',
                 "uvg activate --help",
+                "uvg activate -h",
                 "uvg activate tools extra",
                 "uvg deactivate extra",
                 'uvg passthrough "two words"',
@@ -295,6 +293,7 @@ fi
     assert completed_process.stdout.splitlines() == [
         f"ROUTED={shell_name.value}:tools",
         "CALL<activate><--help>",
+        "CALL<activate><-h>",
         "CALL<activate><tools><extra>",
         "CALL<deactivate><extra>",
         "CALL<passthrough><two words>",
@@ -341,6 +340,7 @@ if "%~1"=="fail" exit /b 7
                 "uvg activate tools",
                 '[Console]::Out.WriteLine("ROUTED=" + $global:UVG_ROUTED)',
                 "uvg activate --help",
+                "uvg activate -h",
                 "uvg activate tools extra",
                 "uvg deactivate extra",
                 'uvg passthrough "two words"',
@@ -372,6 +372,7 @@ if "%~1"=="fail" exit /b 7
     assert completed_process.stdout.splitlines() == [
         "ROUTED=pwsh:tools",
         "CALL<activate><--help><>",
+        "CALL<activate><-h><>",
         "CALL<activate><tools><extra>",
         "CALL<deactivate><extra><>",
         "CALL<passthrough><two words><>",

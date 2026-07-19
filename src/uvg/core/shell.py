@@ -90,68 +90,48 @@ def quote_pwsh_string_literal(value: str) -> str:
 
 
 def _render_posix_profile_loader(shell_name: ShellName) -> str:
-    return f"""_uvg_hook=
-if _uvg_hook="$(command uvg shell hook {shell_name.value})"; then
-    if [ -n "$_uvg_hook" ]; then
-        eval "$_uvg_hook" || printf '%s\\n' "uvg: failed to load {shell_name.value} hook" >&2
-    else
-        printf '%s\\n' "uvg: generated an empty {shell_name.value} hook" >&2
-    fi
+    return f"""if _uvg_hook="$(command uvg shell hook {shell_name.value})"; then
+    eval "$_uvg_hook"
 fi
 unset _uvg_hook"""
 
 
 def _render_pwsh_profile_loader() -> str:
-    return """$uvgCommand = Get-Command uvg -CommandType Application `
-    -TotalCount 1 -ErrorAction SilentlyContinue
-if ($null -eq $uvgCommand) {
-    Write-Error "uvg executable was not found on PATH."
-} else {
+    return """& {
+    $uvgCommand = Get-Command uvg -CommandType Application `
+        -TotalCount 1 -ErrorAction SilentlyContinue
+    if ($null -eq $uvgCommand) {
+        return
+    }
+
     $uvgHook = & $uvgCommand.Source shell hook pwsh
     if ($LASTEXITCODE -eq 0) {
-        $uvgHookText = $uvgHook -join "`n"
-        if ([string]::IsNullOrWhiteSpace($uvgHookText)) {
-            Write-Error "uvg generated an empty PowerShell hook."
-        } else {
-            Invoke-Expression $uvgHookText
-            if (-not $?) {
-                Write-Error "uvg failed to load the PowerShell hook."
-            }
-        }
+        Invoke-Expression ($uvgHook -join "`n")
     }
-}
-Remove-Variable uvgCommand, uvgHook, uvgHookText -ErrorAction SilentlyContinue"""
+}"""
 
 
 def _render_posix_shell_hook(shell_name: ShellName) -> str:
     return f"""uvg() {{
-    if [ "$#" -eq 2 ] && [ "$1" = "activate" ] && [ "$2" != "--help" ] && [ "$2" != "-h" ]; then
+    if [ "$#" -eq 2 ] && [ "$1" = "activate" ] && [ "${{2#-}}" = "$2" ]; then
         local activation_code
-        activation_code="$(command uvg shell activate {shell_name.value} "$2")" || return $?
-        if [ -z "$activation_code" ]; then
-            echo "Error: uvg returned empty activation code." >&2
-            return 1
-        fi
-        eval "$activation_code"
-        return $?
-    fi
-
-    if [ "$#" -eq 1 ] && [ "$1" = "deactivate" ]; then
+        activation_code="$(command uvg shell activate {shell_name.value} "$2")" &&
+            eval "$activation_code"
+    elif [ "$#" -eq 1 ] && [ "$1" = "deactivate" ]; then
         if command -v deactivate >/dev/null 2>&1; then
             deactivate
-            return $?
+        else
+            printf '%s\\n' "uvg: no active environment" >&2
+            return 1
         fi
-        echo "Error: no virtual environment is active." >&2
-        return 1
+    else
+        command uvg "$@"
     fi
-
-    command uvg "$@"
 }}"""
 
 
 def _render_pwsh_shell_hook() -> str:
     return """function global:uvg {
-    $originalArguments = @($args)
     $uvgCommand = Get-Command uvg -CommandType Application `
         -TotalCount 1 -ErrorAction SilentlyContinue
     if ($null -eq $uvgCommand) {
@@ -159,43 +139,32 @@ def _render_pwsh_shell_hook() -> str:
         $global:LASTEXITCODE = 1
         return
     }
-    $uvgExecutable = $uvgCommand.Source
-
     if (
-        $originalArguments.Count -eq 2 -and
-        $originalArguments[0] -eq "activate" -and
-        $originalArguments[1] -notin @("--help", "-h")
+        $args.Count -eq 2 -and
+        $args[0] -eq "activate" -and
+        -not ([string]$args[1]).StartsWith("-")
     ) {
-        $activationCode = & $uvgExecutable shell activate pwsh ([string]$originalArguments[1])
+        $activationCode = & $uvgCommand.Source shell activate pwsh $args[1]
         if ($LASTEXITCODE -ne 0) {
             return
         }
-        if ([string]::IsNullOrWhiteSpace(($activationCode -join "`n"))) {
-            Write-Error "uvg returned empty activation code."
-            $global:LASTEXITCODE = 1
-            return
-        }
         Invoke-Expression ($activationCode -join "`n")
-        if ($?) {
-            $global:LASTEXITCODE = 0
-        } else {
-            $global:LASTEXITCODE = 1
-        }
+        $global:LASTEXITCODE = [int](-not $?)
         return
     }
 
-    if ($originalArguments.Count -eq 1 -and $originalArguments[0] -eq "deactivate") {
+    if ($args.Count -eq 1 -and $args[0] -eq "deactivate") {
         if (Test-Path Function:\\deactivate) {
             deactivate
-            $global:LASTEXITCODE = 0
+            $global:LASTEXITCODE = [int](-not $?)
         } else {
-            Write-Error "No virtual environment is active."
+            Write-Error "uvg: no active environment"
             $global:LASTEXITCODE = 1
         }
         return
     }
 
-    & $uvgExecutable @originalArguments
+    & $uvgCommand.Source @args
 }"""
 
 

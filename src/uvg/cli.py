@@ -13,6 +13,7 @@ app = typer.Typer(
     help="uvg: a global virtual environment manager built on top of uv",
     add_completion=False,
     no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 
 
