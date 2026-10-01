@@ -2,6 +2,8 @@ version: 2
 updates:
   # GitHub Actions
   - package-ecosystem: "github-actions"
+    assignees:
+      - "Noai-oss"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -18,6 +20,8 @@ updates:
           - "*"
   # Python
   - package-ecosystem: "uv"
+    assignees:
+      - "Noai-oss"
     directory: "/"
     schedule:
       interval: "weekly"
