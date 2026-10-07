@@ -1,10 +1,26 @@
 # Changelog
 
+## [0.1.7](https://github.com/Noai-oss/uvg/compare/v0.1.6..v0.1.7) - 2026-10-07
+
+### 🐛 Bug Fixes
+
+- Fix the release_pr's title style to be skipped by git-cliff ([#44](https://github.com/Noai-oss/uvg/issues/44)) - ([fc02213](https://github.com/Noai-oss/uvg/commit/fc02213ed5145647c3c68881de6c483947a4c702))
+
+### ♻️ Refactor
+
+- Simplify uv venv creation to print output directly ([#57](https://github.com/Noai-oss/uvg/issues/57)) - ([83146e8](https://github.com/Noai-oss/uvg/commit/83146e81afb656027e6802eeeab5fe6ba8faf05f))
+- [**breaking**] Simplify shell integration and named environment contracts ([#60](https://github.com/Noai-oss/uvg/issues/60)) - ([a11f3d5](https://github.com/Noai-oss/uvg/commit/a11f3d59581c634ae6593d134c72fb68cd199bd5))
+
+
 ## [0.1.6](https://github.com/Noai-oss/uvg/compare/v0.1.5..v0.1.6) - 2026-06-04
 
 ### 🐛 Bug Fixes
 
 - Restore typos for git-cliff workflows ([#42](https://github.com/Noai-oss/uvg/issues/42)) - ([7487634](https://github.com/Noai-oss/uvg/commit/7487634f6003b7cae8913fcc2ba6e2189aaf24d8))
+
+### 📝 Documentation
+
+- Update changelog for v0.1.6 ([#43](https://github.com/Noai-oss/uvg/issues/43)) - ([1e45618](https://github.com/Noai-oss/uvg/commit/1e4561826a67862311566c8a3d23b471f515835f))
 
 
 ## [0.1.5](https://github.com/Noai-oss/uvg/compare/v0.1.4..v0.1.5) - 2026-06-03
