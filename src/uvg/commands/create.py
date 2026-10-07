@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 
-from uvg.core.environment import create
+from uvg.core.environment import create, get_venvs_dir, read_python_version
 
 app = typer.Typer()
 
@@ -20,6 +20,10 @@ def create_environment_command(
     ] = None,
 ) -> None:
     """Create a new managed environment."""
-    managed_environment_path = create(environment_name, python_version)
+    managed_environment_path = create(get_venvs_dir(), environment_name, python_version)
     typer.echo(f"Created environment '{managed_environment_path.name}'")
+    typer.echo(f"Python: {read_python_version(managed_environment_path) or 'unknown'}")
     typer.echo(f"Path: {managed_environment_path}")
+    typer.echo()
+    typer.echo("Activate with:")
+    typer.echo(f"  uvg activate {managed_environment_path.name}")

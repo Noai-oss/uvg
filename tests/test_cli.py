@@ -1,11 +1,8 @@
-from unittest.mock import MagicMock, patch
-
 import pytest
 from typer.testing import CliRunner
 
 from uvg.__main__ import main
 from uvg.cli import app
-from uvg.core.errors import UvgError
 
 runner = CliRunner()
 
@@ -26,25 +23,40 @@ def test_main_returns_usage_exit_code_for_cli_errors(
     assert "No such command 'does-not-exist'" in capsys.readouterr().err
 
 
-@patch("uvg.cli.shutil.which")
-def test_main_returns_error_when_uv_missing(
-    mock_which: MagicMock,
+@pytest.mark.parametrize("command", ["init", "setup"])
+def test_obsolete_initialization_commands_are_removed(command: str) -> None:
+    result = runner.invoke(app, [command, "bash"])
+
+    assert result.exit_code == 2
+    assert f"No such command '{command}'" in result.output
+
+
+def test_read_only_commands_do_not_require_uv_on_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PATH", "")
+
+    result = runner.invoke(app, ["env", "list"])
+
+    assert result.exit_code == 0
+
+
+def test_direct_activate_reports_error_on_stderr(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    mock_which.side_effect = lambda executable: None if executable == "uv" else executable
-
-    exit_code = main(["env", "list"])
+    exit_code = main(["activate", "tools"])
+    captured = capsys.readouterr()
 
     assert exit_code == 1
-    assert "Error: Not found 'uv', please install it first." in capsys.readouterr().err
+    assert captured.out == ""
+    assert "cannot modify its parent shell directly" in captured.err
+    assert "source " not in captured.err
 
 
-@patch("uvg.cli.shutil.which")
-def test_command_should_fail_when_uv_missing(mock_which: MagicMock) -> None:
-    mock_which.side_effect = lambda executable: None if executable == "uv" else executable
+def test_direct_deactivate_reports_error_on_stderr(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = main(["deactivate"])
+    captured = capsys.readouterr()
 
-    with pytest.raises(UvgError) as exc_info:
-        runner.invoke(app, ["env", "list"], catch_exceptions=False)
-
-    assert "Not found 'uv', please install it first." in str(exc_info.value)
-    mock_which.assert_called_once_with("uv")
+    assert exit_code == 1
+    assert captured.out == ""
+    assert "requires shell integration" in captured.err
