@@ -1,5 +1,7 @@
 # uvg
 
+[English](README.md) | [简体中文](README_zh.md)
+
 A global Python virtual environment manager built on `uv`.
 
 **`uv` for projects, `uvg` for environments.**
