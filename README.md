@@ -10,11 +10,12 @@ A global Python virtual environment manager built on `uv`.
 
 ```bash
 uv tool install uvg
-# or install this checkout
-uv tool install .
 ```
 
 ## Shell integration
+
+Supported: Linux and macOS with Bash or Zsh; Windows with PowerShell 7 or Git Bash.
+For Git Bash, use the Bash loader below.
 
 Add the matching loader below to your shell profile, then restart the shell or
 reload that file. Choose the profile yourself (for example, `~/.bashrc`,
@@ -61,9 +62,8 @@ unset _uvg_hook
 }
 ```
 
-Supported combinations are Linux and macOS with Bash or Zsh, and Windows with
-PowerShell 7 or Git Bash. In Git Bash use the Bash loader. Windows PowerShell 5.1,
-cmd.exe, Fish, and Linux PowerShell are outside the supported matrix.
+In PowerShell scripts, check `$LASTEXITCODE` after calling uvg. Do not use `$?`,
+`&&`, or `||` to decide whether it succeeded; see [exit status](docs/reference.md#exit-status).
 
 ## Quick start
 
@@ -75,88 +75,24 @@ uvg deactivate
 uvg remove myenv
 ```
 
-uv is needed to create environments. Querying and activating existing environments
-does not require uv on PATH.
-
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `uvg create <name> [-p VERSION]` | Create an environment using uv venv --seed |
-| `uvg activate <name>` | Source the standard script in the current shell |
-| `uvg deactivate` | Call the current shell's standard deactivate function |
+| `uvg create <name> [-p VERSION]` | Create a named environment |
+| `uvg activate <name>` | Activate an environment in the current shell |
+| `uvg deactivate` | Deactivate the current environment |
 | `uvg remove <name> [-y]` | Remove an environment; confirm unless -y is given |
 | `uvg env list` | List environments and their Python versions |
-| `uvg env current` | Identify the managed directory referenced by VIRTUAL_ENV |
-| `uvg env dir` | Print the environment root without creating it |
-| `uvg shell hook <shell>` | Print the runtime hook |
-| `uvg shell activate <shell> <name>` | Print code to source the standard script |
+| `uvg env current` | Show the current managed environment's name |
+| `uvg env dir` | Print the environment directory |
 
-The low-level `shell` commands write code only to stdout on success. Errors go to
-stderr with a nonzero status. The loader and hook never execute output from a
-failed code-generation process.
+Run `uvg <command> --help` for options.
 
-## Environment directories
+## Configuration and reference
 
-Environments are ordinary first-level directories under `~/.uvg/venvs`.
-To move this root, set `UVG_HOME` to an absolute path; `~` is expanded. An unset
-variable uses the default. An empty value or relative path is a configuration
-error.
+Environments are stored in `~/.uvg/venvs` by default. Set `UVG_HOME` to an absolute
+path to use `UVG_HOME/venvs` instead; see [directory configuration](docs/reference.md#environment-directories).
 
-The path must not contain the platform's PATH separator (a semicolon on Windows,
-a colon on Linux/macOS). Standard activation scripts cannot add such directories
-to PATH as a single entry, so uvg rejects the configuration.
-
-Names start with an ASCII letter or digit and then contain only ASCII letters,
-digits, dots, underscores, or hyphens. Surrounding whitespace in a supplied name
-is stripped. Environment symlinks and Windows junctions are not supported.
-
-The directory is the source of truth: no registration file is required. Empty or
-incomplete directories appear in the list with `unknown` when their Python
-version cannot be read. Activation checks for the required standard script.
-If a listing encounters an unsupported name or link, it still prints valid
-environments, reports the invalid entries to stderr, and exits nonzero.
-
-Failed creation leaves any files in place and reports their location. Inspect
-them before removing the environment. Removal refuses the environment referenced
-by this process's `VIRTUAL_ENV`; it does not track other terminals. A failed
-recursive deletion can leave a partially removed directory.
-
-## Activation and failure semantics
-
-Activation, repeated activation, switching, and deactivation use the environment's
-standard scripts. uvg does not maintain its own saved PATH, prompt, nesting stack,
-or restoration state. `uvg deactivate` also works with an external standard venv
-and does not need the uvg executable to remain on PATH.
-
-A child shell may inherit `VIRTUAL_ENV` and PATH without inheriting a deactivate
-function. Activating there still sources the standard script. Deactivation follows
-that script's baseline, which may already include the parent environment; uvg
-cannot reconstruct the parent's earlier PATH. `env current` reports the directory
-reference, not the completeness of the shell's activation state.
-
-Bash and Zsh preserve command status. The PowerShell wrapper guarantees numeric
-`$LASTEXITCODE` only; do not use `$?`, `&&`, or `||` to determine its success.
-
-```powershell
-uvg activate myenv
-$uvgStatus = $LASTEXITCODE
-if ($uvgStatus -ne 0) {
-    # Handle failure here.
-}
-```
-
-## Migration
-
-This is a breaking shell integration change:
-
-- `uvg init` and `uvg setup` are removed. Manually replace old initialization
-  commands or generated hook blocks with the loader above.
-- The old `uvg activate --shell ...` code-generation interface is replaced by
-  `uvg shell activate <shell> <name>`.
-- Relative or empty `UVG_HOME` values must be replaced with an absolute path or
-  unset to use the default.
-- Paths containing the platform's PATH separator are rejected as well.
-- Links and junctions in the environment directory are rejected. uvg does not
-  move or delete their targets; reorganize these entries manually.
-- Restart existing shells after replacing their initialization code.
+See the [reference](docs/reference.md) for directory rules, shell behavior, and
+scripting interfaces, and the [changelog](CHANGELOG.md) for release history.
