@@ -16,7 +16,7 @@ from uvg.core.environment import (
     create,
     get_current_name,
     get_venvs_dir,
-    list_names,
+    list_environments,
     read_python_version,
     remove,
     validate_name,
@@ -59,7 +59,13 @@ class ManagedEnvironmentTests(unittest.TestCase):
         (self.managed_environments_directory / "zeta").mkdir(parents=True)
         (self.managed_environments_directory / "alpha").mkdir()
 
-        assert list_names() == ["alpha", "zeta"]
+        assert list_environments(self.managed_environments_directory) == (
+            [
+                self.managed_environments_directory / "alpha",
+                self.managed_environments_directory / "zeta",
+            ],
+            [],
+        )
 
     def test_read_python_version_reads_pyvenv_cfg_version_info(self) -> None:
         environment_path = self.managed_environments_directory / "tools"
@@ -104,7 +110,7 @@ class ManagedEnvironmentTests(unittest.TestCase):
             stderr="",
         )
 
-        environment_path = create("tools", "3.12")
+        environment_path = create(self.managed_environments_directory, "tools", "3.12")
 
         assert environment_path == self.managed_environments_directory / "tools"
         subprocess_run_mock.assert_called_once_with(
@@ -117,17 +123,15 @@ class ManagedEnvironmentTests(unittest.TestCase):
                 "--python",
                 "3.12",
             ],
-            capture_output=False,
             check=False,
-            text=True,
         )
 
     def test_create_managed_environment_reports_missing_uv_executable(self) -> None:
         with (
             patch("uvg.core.environment.subprocess.run", side_effect=FileNotFoundError),
-            pytest.raises(UvgError, match="The `uv` executable was not found"),
+            pytest.raises(UvgError, match="The uv executable was not found"),
         ):
-            create("tools")
+            create(self.managed_environments_directory, "tools")
 
         assert not (self.managed_environments_directory / "tools").exists()
 
@@ -142,7 +146,7 @@ class ManagedEnvironmentTests(unittest.TestCase):
         )
 
         with pytest.raises(UvgError, match="Failed to create environment"):
-            create("tools")
+            create(self.managed_environments_directory, "tools")
 
     @patch("uvg.commands.create.read_python_version", return_value="3.12.11")
     @patch("uvg.commands.create.create")
@@ -169,14 +173,15 @@ class ManagedEnvironmentTests(unittest.TestCase):
             "Activate with:",
             "  uvg activate tools",
         ]
-        create_mock.assert_called_once_with("tools", "3.12")
+        create_mock.assert_called_once_with(self.managed_environments_directory, "tools", "3.12")
         read_python_version_mock.assert_called_once_with(environment_path)
 
     @patch.dict("os.environ", {}, clear=True)
-    def test_current_environment_name_returns_none_when_silent_without_active_environment(
+    def test_current_environment_reports_missing_active_environment(
         self,
     ) -> None:
-        assert get_current_name(silent=True) is None
+        with pytest.raises(UvgError, match="No active virtual environment"):
+            get_current_name(self.managed_environments_directory, None)
 
     def test_remove_managed_environment_refuses_active_environment(self) -> None:
         environment_path = self.managed_environments_directory / "tools"
@@ -186,9 +191,10 @@ class ManagedEnvironmentTests(unittest.TestCase):
             patch.dict("os.environ", {"VIRTUAL_ENV": str(environment_path)}),
             pytest.raises(UvgError, match="currently active"),
         ):
-            remove("tools")
+            remove(environment_path, str(environment_path))
 
     def test_remove_command_cancel_exits_successfully_without_removing(self) -> None:
+        (self.managed_environments_directory / "tools").mkdir(parents=True)
         printed_lines: list[str] = []
         with (
             patch("uvg.commands.remove.typer.confirm", return_value=False),

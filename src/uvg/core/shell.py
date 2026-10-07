@@ -7,8 +7,6 @@ import sys
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from uvg.core.errors import UvgError
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -29,13 +27,6 @@ class ShellName(StrEnum):
 IS_WINDOWS = sys.platform == "win32"
 
 
-def render_profile_loader(shell_name: ShellName) -> str:
-    """Render the dynamic loader installed in a shell profile."""
-    if shell_name.is_posix:
-        return _render_posix_profile_loader(shell_name)
-    return _render_pwsh_profile_loader()
-
-
 def render_shell_hook(shell_name: ShellName) -> str:
     """Render the complete runtime hook for a shell."""
     if shell_name.is_posix:
@@ -43,19 +34,12 @@ def render_shell_hook(shell_name: ShellName) -> str:
     return _render_pwsh_shell_hook()
 
 
-def render_activation_command(environment_path: Path, shell_name: ShellName) -> str:
-    """Render code that sources the environment's standard activation script."""
-    activation_script_path = get_activation_script_path(environment_path, shell_name)
-    if not activation_script_path.is_file():
-        raise UvgError(
-            f"Environment '{environment_path.name}' is invalid.\n"
-            f"Missing activation script:\n  {activation_script_path}",
-        )
-
+def render_activation_command(activation_script_path: Path, shell_name: ShellName) -> str:
+    """Render code to source a located script without accessing the filesystem."""
     rendered_path = render_path_for_shell(activation_script_path, shell_name)
     if shell_name.is_posix:
         return f"source {shlex.quote(rendered_path)}"
-    return f". {_quote_pwsh_string_literal(rendered_path)}"
+    return f". {quote_pwsh_string_literal(rendered_path)}"
 
 
 def get_activation_script_path(environment_path: Path, shell_name: ShellName) -> Path:
@@ -86,29 +70,7 @@ def convert_windows_path_to_msys_path(path: Path) -> str:
 
 def quote_pwsh_string_literal(value: str) -> str:
     """Quote a string as a PowerShell single-quoted literal."""
-    return _quote_pwsh_string_literal(value)
-
-
-def _render_posix_profile_loader(shell_name: ShellName) -> str:
-    return f"""if _uvg_hook="$(command uvg shell hook {shell_name.value})"; then
-    eval "$_uvg_hook"
-fi
-unset _uvg_hook"""
-
-
-def _render_pwsh_profile_loader() -> str:
-    return """& {
-    $uvgCommand = Get-Command uvg -CommandType Application `
-        -TotalCount 1 -ErrorAction SilentlyContinue
-    if ($null -eq $uvgCommand) {
-        return
-    }
-
-    $uvgHook = & $uvgCommand.Source shell hook pwsh
-    if ($LASTEXITCODE -eq 0) {
-        Invoke-Expression ($uvgHook -join "`n")
-    }
-}"""
+    return "'" + value.replace("'", "''") + "'"
 
 
 def _render_posix_shell_hook(shell_name: ShellName) -> str:
@@ -118,7 +80,7 @@ def _render_posix_shell_hook(shell_name: ShellName) -> str:
         activation_code="$(command uvg shell activate {shell_name.value} "$2")" &&
             eval "$activation_code"
     elif [ "$#" -eq 1 ] && [ "$1" = "deactivate" ]; then
-        if command -v deactivate >/dev/null 2>&1; then
+        if typeset -f deactivate >/dev/null 2>&1; then
             deactivate
         else
             printf '%s\\n' "uvg: no active environment" >&2
@@ -132,11 +94,27 @@ def _render_posix_shell_hook(shell_name: ShellName) -> str:
 
 def _render_pwsh_shell_hook() -> str:
     return """function global:uvg {
+    if ($args.Count -eq 1 -and $args[0] -eq "deactivate") {
+        if (Test-Path Function:\\deactivate) {
+            try {
+                deactivate
+                $global:LASTEXITCODE = [int](-not $?)
+            } catch {
+                $global:LASTEXITCODE = 1
+                Write-Error -ErrorRecord $_
+            }
+        } else {
+            $global:LASTEXITCODE = 1
+            Write-Error "uvg: no active environment"
+        }
+        return
+    }
+
     $uvgCommand = Get-Command uvg -CommandType Application `
         -TotalCount 1 -ErrorAction SilentlyContinue
     if ($null -eq $uvgCommand) {
-        Write-Error "uvg executable was not found on PATH."
         $global:LASTEXITCODE = 1
+        Write-Error "uvg executable was not found on PATH."
         return
     }
     if (
@@ -148,25 +126,15 @@ def _render_pwsh_shell_hook() -> str:
         if ($LASTEXITCODE -ne 0) {
             return
         }
-        Invoke-Expression ($activationCode -join "`n")
-        $global:LASTEXITCODE = [int](-not $?)
-        return
-    }
-
-    if ($args.Count -eq 1 -and $args[0] -eq "deactivate") {
-        if (Test-Path Function:\\deactivate) {
-            deactivate
+        try {
+            Invoke-Expression ($activationCode -join "`n") -ErrorAction Stop
             $global:LASTEXITCODE = [int](-not $?)
-        } else {
-            Write-Error "uvg: no active environment"
+        } catch {
             $global:LASTEXITCODE = 1
+            Write-Error -ErrorRecord $_
         }
         return
     }
 
     & $uvgCommand.Source @args
 }"""
-
-
-def _quote_pwsh_string_literal(value: str) -> str:
-    return "'" + value.replace("'", "''") + "'"

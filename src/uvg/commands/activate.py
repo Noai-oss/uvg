@@ -19,6 +19,6 @@ def activate_environment_command(
     del environment_name
     raise UvgError(
         "`uvg activate` cannot modify its parent shell directly.\n\n"
-        "Set up shell integration first:\n"
-        "  uvg setup <bash|zsh|pwsh> --profile PATH",
+        "Add the documented loader for `uvg shell hook <bash|zsh|pwsh>` to your profile,\n"
+        "then restart your shell. See the README Shell integration section.",
     )

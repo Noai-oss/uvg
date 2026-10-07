@@ -5,7 +5,7 @@ from __future__ import annotations
 import typer
 
 from uvg import __version__
-from uvg.commands import activate, create, deactivate, remove, setup, shell
+from uvg.commands import activate, create, deactivate, remove, shell
 from uvg.commands.env import app as env_app
 
 app = typer.Typer(
@@ -40,7 +40,6 @@ def callback_func(
 
 app.add_typer(create.app)
 app.add_typer(remove.app)
-app.add_typer(setup.app)
 app.add_typer(activate.app)
 app.add_typer(deactivate.app)
 app.add_typer(env_app, name="env", help="Commands for managing virtual environments")

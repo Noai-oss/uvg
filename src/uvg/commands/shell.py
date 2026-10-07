@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
-import os
+import stat
 import sys
-from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from uvg.core.environment import resolve_path
-from uvg.core.shell import ShellName, render_activation_command, render_shell_hook
+from uvg.core.environment import get_venvs_dir, resolve_path
+from uvg.core.errors import UvgError
+from uvg.core.shell import (
+    ShellName,
+    get_activation_script_path,
+    render_activation_command,
+    render_shell_hook,
+)
 
 app = typer.Typer(
     name="shell",
@@ -34,22 +39,19 @@ def shell_activate_command(
     environment_name: Annotated[str, typer.Argument(help="Environment name")],
 ) -> None:
     """Generate code that activates a managed environment."""
-    environment_path = resolve_path(environment_name)
-    active_environment = os.environ.get("VIRTUAL_ENV")
-    if active_environment and _paths_are_equal(Path(active_environment), environment_path):
-        _write_shell_code(":" if shell_name.is_posix else "$null = $null")
-        return
-
-    _write_shell_code(render_activation_command(environment_path, shell_name))
+    environment_path = resolve_path(get_venvs_dir(), environment_name)
+    script_path = get_activation_script_path(environment_path, shell_name)
+    try:
+        mode = script_path.stat().st_mode
+    except FileNotFoundError as exc:
+        raise UvgError(f"Missing activation script:\n  {script_path}") from exc
+    except OSError as exc:
+        raise UvgError(f"Could not read activation script '{script_path}': {exc}") from exc
+    if not stat.S_ISREG(mode):
+        raise UvgError(f"Activation script is not a regular file: {script_path}")
+    _write_shell_code(render_activation_command(script_path, shell_name))
 
 
 def _write_shell_code(code: str) -> None:
     """Write shell code as UTF-8 with a platform-independent newline."""
     sys.stdout.buffer.write(f"{code}\n".encode())
-
-
-def _paths_are_equal(first: Path, second: Path) -> bool:
-    try:
-        return first.resolve() == second.resolve()
-    except OSError:
-        return False

@@ -14,5 +14,6 @@ def deactivate_environment_command() -> None:
     """Deactivate the current environment."""
     raise UvgError(
         "`uvg deactivate` requires shell integration.\n"
-        "Run `uvg setup <bash|zsh|pwsh> --profile PATH`, then restart your shell.",
+        "Add the documented `uvg shell hook <bash|zsh|pwsh>` loader to your profile,\n"
+        "then restart your shell. See the README Shell integration section.",
     )

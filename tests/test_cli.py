@@ -23,11 +23,12 @@ def test_main_returns_usage_exit_code_for_cli_errors(
     assert "No such command 'does-not-exist'" in capsys.readouterr().err
 
 
-def test_init_command_is_removed() -> None:
-    result = runner.invoke(app, ["init", "bash"])
+@pytest.mark.parametrize("command", ["init", "setup"])
+def test_obsolete_initialization_commands_are_removed(command: str) -> None:
+    result = runner.invoke(app, [command, "bash"])
 
     assert result.exit_code == 2
-    assert "No such command 'init'" in result.output
+    assert f"No such command '{command}'" in result.output
 
 
 def test_read_only_commands_do_not_require_uv_on_path(monkeypatch: pytest.MonkeyPatch) -> None:
