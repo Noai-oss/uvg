@@ -42,7 +42,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y zsh
     
       - name: Run Pre-commit
-        uses: j178/prek-action@v3.0.0
+        uses: j178/prek-action@v3.0.1
 
       - name: Run Tests
         run: uv run pytest .
