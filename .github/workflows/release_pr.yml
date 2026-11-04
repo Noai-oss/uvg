@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install typos
-        uses: try-chance/setup-typos@c637a59fc05ac8f2dffbd99b67d531be105ee32c # v0.0.2
+        uses: try-chance/setup-typos@5eb14f1b93f29966ff9fb729297518dd55cd5781 # v0.0.3
 
       - name: Install git-cliff
         uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
